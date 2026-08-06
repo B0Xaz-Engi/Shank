@@ -261,22 +261,6 @@ local function tw(obj, info, props)
 	return t
 end
 
-local function addShadow(parent, depth)
-	depth = depth or 1
-	local shadow = mk("Frame", {
-		Name = "Shadow",
-		BackgroundColor3 = T.SHADOW,
-		BackgroundTransparency = 0.65 + (depth * 0.1),
-		Size = UDim2.new(1, sn(8 + depth * 4), 0, sn(8 + depth * 4)),
-		Position = UDim2.new(0.5, 0, 0.5, sn(2 + depth)),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = -1,
-		Parent = parent
-	})
-	applyCorner(shadow, sn(14 + depth * 2))
-	return shadow
-end
-
 local function addInnerGlow(parent, color, transparency)
 	local glow = mk("Frame", {
 		Name = "InnerGlow",
@@ -434,7 +418,6 @@ local function createTooltip(gui)
 	})
 	applyCorner(_tooltipFrame, 8)
 	applyStroke(_tooltipFrame, T.BORDER, 1, 0.15)
-	addShadow(_tooltipFrame, 0)
 	_tooltipLabel = mk("TextLabel", {
 		BackgroundTransparency = 1, Size = UDim2.new(1, -14, 1, 0), Position = UDim2.new(0, 7, 0, 0),
 		Text = "", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11),
@@ -526,12 +509,6 @@ function VoidUI:Notify(cfg)
 	applyCorner(notif, 10)
 	local notifStroke = applyStroke(notif, accent, 1, 0.3)
 
-	local accentBar = mk("Frame", {
-		BackgroundColor3 = accent, Size = UDim2.new(0, 3, 0, 0),
-		Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0, Parent = notif
-	})
-	applyCorner(accentBar, 2)
-
 	local titleLbl = mk("TextLabel", {
 		BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 10),
 		Size = UDim2.new(1, -44, 0, 18), Text = title, TextColor3 = T.TEXT_BRIGHT,
@@ -568,7 +545,6 @@ function VoidUI:Notify(cfg)
 	closeBtn.MouseLeave:Connect(function() tw(closeBtn, A.QUICK, {TextColor3 = T.TEXT_MUTED, TextTransparency = 0.2}) end)
 
 	tw(notif, A.POP, {Size = UDim2.new(0, SETTINGS.NOTIF.WIDTH, 0, totalH), BackgroundTransparency = 0})
-	tw(accentBar, A.SMOOTH, {Size = UDim2.new(0, 3, 1, 0)})
 	task.delay(0.05, function() tw(titleLbl, A.SNAPPY, {TextTransparency = 0}) end)
 	task.delay(0.1, function() tw(contentLbl, A.SNAPPY, {TextTransparency = 0}) end)
 	tw(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
@@ -578,7 +554,6 @@ function VoidUI:Notify(cfg)
 		if dismissed then return end
 		dismissed = true
 		_activeNotifCount = math.max(0, _activeNotifCount - 1)
-		tw(accentBar, A.QUICK, {Size = UDim2.new(0, 3, 0, 0)})
 		tw(titleLbl, A.QUICK, {TextTransparency = 1})
 		tw(contentLbl, A.QUICK, {TextTransparency = 1})
 		tw(notifStroke, A.QUICK, {Transparency = 1})
@@ -612,21 +587,10 @@ local function buildCard(parent, height, opts)
 	applyCorner(card, sn(8))
 	local cardStroke = applyStroke(card, T.BORDER_DIM, 1, 0.35)
 
-	local shadow = addShadow(card, opts.shadowDepth or 1)
-
-	if opts.accentLeft then
-		local leftBar = mk("Frame", {
-			BackgroundColor3 = T.ACCENT, BackgroundTransparency = 0.6,
-			Size = UDim2.new(0, 3, 0.6, 0), Position = UDim2.new(0, 0, 0.2, 0),
-			BorderSizePixel = 0, Parent = card
-		})
-		applyCorner(leftBar, 2)
-	end
-
-	return wrapper, card, cardStroke, shadow
+	return wrapper, card, cardStroke
 end
 
-local function cardHover(card, cardStroke, shadow, opts)
+local function cardHover(card, cardStroke, opts)
 	opts = opts or {}
 	local origSize = card.Size
 
@@ -637,9 +601,6 @@ local function cardHover(card, cardStroke, shadow, opts)
 			Position = UDim2.new(card.Position.X.Scale, card.Position.X.Offset - sn(1), card.Position.Y.Scale, card.Position.Y.Offset - sn(1))
 		})
 		tw(cardStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.15})
-		if shadow then
-			tw(shadow, A.SNAPPY, {BackgroundTransparency = 0.55, Size = UDim2.new(1, sn(14), 0, sn(14)), Position = UDim2.new(0.5, 0, 0.5, sn(4))})
-		end
 	end)
 
 	card.MouseLeave:Connect(function()
@@ -649,9 +610,6 @@ local function cardHover(card, cardStroke, shadow, opts)
 			Position = UDim2.new(card.Position.X.Scale, sn(2), card.Position.Y.Scale, sn(1))
 		})
 		tw(cardStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.35})
-		if shadow then
-			tw(shadow, A.SNAPPY, {BackgroundTransparency = 0.75, Size = UDim2.new(1, sn(8), 0, sn(8)), Position = UDim2.new(0.5, 0, 0.5, sn(3))})
-		end
 	end)
 end
 
@@ -686,7 +644,6 @@ function VoidUI:CreateWindow(cfg)
 	})
 	applyCorner(LoadFrame, cr)
 	applyStroke(LoadFrame, T.BORDER, 1, 0.15)
-	addShadow(LoadFrame, 2)
 
 	mk("TextLabel", {
 		BackgroundTransparency = 1, Size = UDim2.new(1, -sn(24), 0, sn(22)),
@@ -729,7 +686,6 @@ function VoidUI:CreateWindow(cfg)
 	})
 	applyCorner(Main, cr)
 	local mainStroke = applyStroke(Main, T.BORDER, 1, 0.1)
-	local mainShadow = addShadow(Main, 3)
 	tw(Main, A.POP, {Size = UDim2.new(0, wW, 0, wH), BackgroundTransparency = 0})
 	local origSize = UDim2.new(0, wW, 0, wH)
 
@@ -789,7 +745,6 @@ function VoidUI:CreateWindow(cfg)
 		windowOpen = false
 		tw(Main, A.SMOOTH, {Size = UDim2.new(0, wW * 0.95, 0, wH * 0.95), BackgroundTransparency = 1})
 		tw(mainStroke, A.QUICK, {Transparency = 1})
-		if mainShadow then tw(mainShadow, A.QUICK, {BackgroundTransparency = 1}) end
 		for _, child in ipairs(Main:GetDescendants()) do
 			pcall(function()
 				if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then
@@ -824,7 +779,6 @@ function VoidUI:CreateWindow(cfg)
 		end
 		tw(Main, A.POP, {Size = origSize, BackgroundTransparency = 0})
 		tw(mainStroke, A.SNAPPY, {Transparency = 0.1})
-		if mainShadow then tw(mainShadow, A.SNAPPY, {BackgroundTransparency = 0.65}) end
 	end
 
 	CloseBtn.MouseButton1Click:Connect(function()
@@ -854,7 +808,6 @@ function VoidUI:CreateWindow(cfg)
 		})
 		applyCorner(mobBtn, sn(10))
 		applyStroke(mobBtn, T.BORDER, 1, 0.15)
-		addShadow(mobBtn, 1)
 
 		local mDragging, mDragStart, mDragPos = false, nil, nil
 		mobBtn.InputBegan:Connect(function(input)
@@ -1058,7 +1011,7 @@ function VoidUI:CreateWindow(cfg)
 
 		function tabData:CreateButton(elementCfg)
 			elementCfg = elementCfg or {}
-			local wrapper, card, cs, shadow = buildCard(page, 38, {accentLeft = true})
+			local wrapper, card, cs = buildCard(page, 38)
 
 			local btn = mk("TextButton", {
 				BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0),
@@ -1068,7 +1021,7 @@ function VoidUI:CreateWindow(cfg)
 			})
 			applyPadding(btn, 0, sn(14), 0, sn(16))
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 
 			btn.MouseButton1Click:Connect(function()
@@ -1091,7 +1044,7 @@ function VoidUI:CreateWindow(cfg)
 			local enabled = elementCfg.CurrentValue or false
 			local togObj = {}
 
-			local wrapper, card, cs, shadow = buildCard(page, IS_MOBILE and 44 or 38)
+			local wrapper, card, cs = buildCard(page, IS_MOBILE and 44 or 38)
 			local btn = mk("TextButton", {
 				BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0),
 				Text = "", AutoButtonColor = false, Parent = card
@@ -1149,7 +1102,7 @@ function VoidUI:CreateWindow(cfg)
 				if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end
 			end)
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 
 			if elementCfg.ConfigKey then
@@ -1178,7 +1131,7 @@ function VoidUI:CreateWindow(cfg)
 			local currentVal = math.clamp(elementCfg.CurrentValue or minVal, minVal, maxVal)
 			local sliderObj = {}
 
-			local wrapper, card, cs, shadow = buildCard(page, IS_MOBILE and 60 or 54)
+			local wrapper, card, cs = buildCard(page, IS_MOBILE and 60 or 54)
 
 			mk("TextLabel", {
 				BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(6)),
@@ -1214,7 +1167,6 @@ function VoidUI:CreateWindow(cfg)
 			})
 			applyCorner(thumb, math.floor(thumbSize / 2))
 			local thumbStroke = applyStroke(thumb, T.BORDER_GLOW, 1, 0.2)
-			addShadow(thumb, 0)
 
 			local sliding = false
 
@@ -1249,7 +1201,7 @@ function VoidUI:CreateWindow(cfg)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end
 			end))
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 
 			if elementCfg.ConfigKey then
@@ -1284,7 +1236,7 @@ function VoidUI:CreateWindow(cfg)
 			local isOpen = false
 			local dropObj = {}
 
-			local wrapper, card, cs, shadow = buildCard(page, 38)
+			local wrapper, card, cs = buildCard(page, 38)
 			card.ClipsDescendants = true
 
 			local header = mk("TextButton", {
@@ -1378,7 +1330,7 @@ function VoidUI:CreateWindow(cfg)
 				end
 			end)
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 
 			function dropObj:Set(newOptions)
@@ -1399,7 +1351,7 @@ function VoidUI:CreateWindow(cfg)
 		function tabData:CreateInput(elementCfg)
 			elementCfg = elementCfg or {}
 			local inputObj = {}
-			local wrapper, card, cs, shadow = buildCard(page, 38)
+			local wrapper, card, cs = buildCard(page, 38)
 
 			mk("TextLabel", {
 				BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0),
@@ -1422,7 +1374,7 @@ function VoidUI:CreateWindow(cfg)
 				if elementCfg.Callback then task.spawn(elementCfg.Callback, box.Text, enter) end
 			end)
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 			function inputObj:Set(text) box.Text = tostring(text) end
 			trackElement(wrapper, elementCfg.Name or "Input")
@@ -1472,7 +1424,7 @@ function VoidUI:CreateWindow(cfg)
 			elementCfg = elementCfg or {}
 			local currentColor = elementCfg.Default or Color3.fromRGB(0, 255, 200)
 			local cpObj = {}
-			local wrapper, card, cs, shadow = buildCard(page, 38)
+			local wrapper, card, cs = buildCard(page, 38)
 			card.ClipsDescendants = true
 
 			local header = mk("TextButton", {
@@ -1570,7 +1522,7 @@ function VoidUI:CreateWindow(cfg)
 				tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, newH + sn(6))})
 			end)
 
-			cardHover(card, cs, shadow)
+			cardHover(card, cs)
 			if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
 
 			if elementCfg.ConfigKey then
@@ -1803,7 +1755,6 @@ local function createKeyUI()
 
 	local KFrame = mk("Frame", {Size = UDim2.new(0, 340 * s, 0, 200 * s), Position = UDim2.new(0.5, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, BackgroundTransparency = 0.1, Parent = KGui})
 	applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
-	addShadow(KFrame, 3)
 	tw(KFrame, A.POP, {BackgroundTransparency = 0})
 
 	mk("TextLabel", {Size = UDim2.new(1, -sn(24), 0, sn(28)), Position = UDim2.new(0, sn(16), 0, sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
