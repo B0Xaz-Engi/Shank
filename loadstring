@@ -138,8 +138,6 @@ local SETTINGS = {
 		TRACER_TRANSPARENCY = 0.4,
 		BOX_THICKNESS = 1.5,
 		BOX_TRANSPARENCY = 0.3,
-		BOX_HEIGHT = 5.5,
-		BOX_WIDTH = 3.5,
 	},
 	CHAMS = {
 		FILL_COLOR = Color3.fromRGB(0, 40, 35),
@@ -474,19 +472,19 @@ function VoidUI:CreateWindow(cfg)
 		if not windowOpen then return end; windowOpen = false
 		tw(Main, A.SMOOTH, {Size = UDim2.new(0, wW * 0.95, 0, wH * 0.95), BackgroundTransparency = 1}); tw(mainStroke, A.QUICK, {Transparency = 1})
 		for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-				if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
-				elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
-				elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1}) end
-			end) end
+			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
+			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
+			elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1}) end
+		end) end
 		task.delay(0.3, function() if Main and Main.Parent then Main.Visible = false end end)
 	end
 	local function openWindow()
 		if windowOpen then return end; windowOpen = true; windowMin = false; Main.Visible = true; Main.BackgroundTransparency = 0; Main.Size = UDim2.new(0, wW * 0.93, 0, wH * 0.93)
 		for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-				if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child.TextTransparency = child:GetAttribute("_oTT") or 0
-				elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child.BackgroundTransparency = child:GetAttribute("_oBT") or 0
-				elseif child:IsA("UIStroke") then child.Transparency = child:GetAttribute("_oST") or 0 end
-			end) end
+			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child.TextTransparency = child:GetAttribute("_oTT") or 0
+			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child.BackgroundTransparency = child:GetAttribute("_oBT") or 0
+			elseif child:IsA("UIStroke") then child.Transparency = child:GetAttribute("_oST") or 0 end
+		end) end
 		tw(Main, A.POP, {Size = origSize, BackgroundTransparency = 0}); tw(mainStroke, A.SNAPPY, {Transparency = 0.1})
 	end
 
@@ -513,10 +511,10 @@ function VoidUI:CreateWindow(cfg)
 	local WinObj = {}; WinObj._gui = Gui; WinObj._main = Main
 	function WinObj:Notify(notifCfg) VoidUI:Notify(notifCfg) end
 	function WinObj:StoreTransparencies() task.defer(function() for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-					if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child:SetAttribute("_oTT", child.TextTransparency)
-					elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child:SetAttribute("_oBT", child.BackgroundTransparency)
-					elseif child:IsA("UIStroke") then child:SetAttribute("_oST", child.Transparency) end
-				end) end end) end
+		if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child:SetAttribute("_oTT", child.TextTransparency)
+		elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child:SetAttribute("_oBT", child.BackgroundTransparency)
+		elseif child:IsA("UIStroke") then child:SetAttribute("_oST", child.Transparency) end
+	end) end end) end
 
 	function WinObj:CreateTab(name)
 		local tabData = {_name = name, _elements = {}, _searchElements = {}}
@@ -663,6 +661,7 @@ local _appState = {
 	noFog = false, hideLocalChar = false, bigHead = false,
 	teamChams = false, teamChamsOutlineColor = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE,
 	espHiddenPlayers = {},
+	hitboxExpander = false, hitboxSize = 10,
 }
 
 local _espData = {}
@@ -676,6 +675,7 @@ local _savedLighting = {}
 local _freecamOldSubject = nil
 local _espUpdateCounter = 0
 local _lightingEffects = {}
+local _originalHitboxes = {}
 
 local function getCharacter(player) player = player or LocalPlayer; return player and player.Character end
 local function getHumanoid(player) local c = getCharacter(player); return c and c:FindFirstChildOfClass("Humanoid") end
@@ -724,7 +724,6 @@ local function updateESP()
 		if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end
 		local targetRoot = getRootPart(player)
 
-		-- Tracers
 		if targetRoot and data.tracerLine then
 			local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position)
 			if onScreen then
@@ -782,13 +781,62 @@ local function removeChams(player) local data = _chamsData[player]; if not data 
 local function clearAllChams() for player in pairs(_chamsData) do removeChams(player) end; if _chamsFolder and _chamsFolder.Parent then _chamsFolder:ClearAllChildren() end end
 local function refreshChamsColors() if _chamsFolder then for _, hl in ipairs(_chamsFolder:GetChildren()) do if hl:IsA("Highlight") then hl.OutlineColor = _appState.chamsOutlineColor end end end end
 
--- Team Chams
 local function ensureTeamChamsFolder() if not _teamChamsFolder or not _teamChamsFolder.Parent then _teamChamsFolder = mk("Folder", {Name = "VoidTeamChams", Parent = CoreGui}) end; return _teamChamsFolder end
 local function applyTeamChamsToChar(player, char) if not char then return end; local folder = ensureTeamChamsFolder(); local key = "VTC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; local outlineColor = _appState.teamChamsOutlineColor; if player.Team then outlineColor = player.TeamColor.Color end; return mk("Highlight", {Name = key, FillColor = SETTINGS.TEAM_CHAMS.FILL_COLOR, FillTransparency = SETTINGS.TEAM_CHAMS.FILL_TRANSPARENCY, OutlineColor = outlineColor, OutlineTransparency = SETTINGS.TEAM_CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
 local function addTeamChams(player) if player == LocalPlayer or _teamChamsData[player] then return end; if not isAlly(player) then return end; local data = {connections = {}}; if player.Character then data.highlight = applyTeamChamsToChar(player, player.Character) end; table.insert(data.connections, player.CharacterAdded:Connect(function(char) task.wait(0.2); if _appState.teamChams and isAlly(player) then data.highlight = applyTeamChamsToChar(player, char) end end)); _teamChamsData[player] = data end
 local function removeTeamChams(player) local data = _teamChamsData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.highlight and data.highlight.Parent then data.highlight:Destroy() end; if _teamChamsFolder and _teamChamsFolder.Parent then for _, v in ipairs(_teamChamsFolder:GetChildren()) do if v.Name == "VTC_" .. player.Name then v:Destroy() end end end; _teamChamsData[player] = nil end
 local function clearAllTeamChams() for player in pairs(_teamChamsData) do removeTeamChams(player) end; if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:ClearAllChildren() end end
 local function refreshTeamChamsColors() if _teamChamsFolder then for _, hl in ipairs(_teamChamsFolder:GetChildren()) do if hl:IsA("Highlight") then local playerName = hl.Name:sub(5); local player = Players:FindFirstChild(playerName); if player and player.Team then hl.OutlineColor = player.TeamColor.Color else hl.OutlineColor = _appState.teamChamsOutlineColor end end end end end
+
+-- Hitbox Expander
+local function saveOriginalHitbox(player)
+	local root = getRootPart(player)
+	if root and not _originalHitboxes[player] then
+		_originalHitboxes[player] = {
+			Size = root.Size,
+			Transparency = root.Transparency,
+			CanCollide = root.CanCollide,
+			Color = root.Color,
+			Material = root.Material,
+		}
+	end
+end
+
+local function restoreHitbox(player)
+	local root = getRootPart(player)
+	local orig = _originalHitboxes[player]
+	if root and orig then
+		root.Size = orig.Size
+		root.Transparency = orig.Transparency
+		root.CanCollide = orig.CanCollide
+		root.Color = orig.Color
+		root.Material = orig.Material
+	end
+	_originalHitboxes[player] = nil
+end
+
+local function expandHitbox(player, size)
+	if player == LocalPlayer then return end
+	local root = getRootPart(player)
+	if root then
+		saveOriginalHitbox(player)
+		root.Size = Vector3.new(size, size, size)
+		root.Transparency = 0.7
+		root.CanCollide = false
+		root.Material = Enum.Material.ForceField
+		if player.Team then
+			root.Color = player.TeamColor.Color
+		else
+			root.Color = Color3.fromRGB(255, 0, 0)
+		end
+	end
+end
+
+local function clearAllHitboxes()
+	for player in pairs(_originalHitboxes) do
+		restoreHitbox(player)
+	end
+end
 
 local function isInsideVendingModel(obj) local cur = obj; while cur and cur ~= workspace do if cur:IsA("Model") and cur.Name == "Model" and cur.Parent and cur.Parent.Name == "vending machine" then return true end; cur = cur.Parent end; return false end
 local function shouldPhasePart(part) if not part or not part:IsA("BasePart") then return false end; for _, folderName in ipairs(G.DOOR_FOLDERS) do local folder = workspace:FindFirstChild(folderName); if folder and part:IsDescendantOf(folder) then return true end end; return isInsideVendingModel(part) end
@@ -824,7 +872,7 @@ local function setBigHead(enabled) for _, player in ipairs(Players:GetPlayers())
 
 local function globalCleanup()
 	for id in pairs(_connections) do removeConnection(id) end; for _, cb in ipairs(_cleanupList) do pcall(cb) end; _cleanupList = {}
-	clearAllESP(); clearAllChams(); clearAllTeamChams(); clearAllDrawings()
+	clearAllESP(); clearAllChams(); clearAllTeamChams(); clearAllHitboxes(); clearAllDrawings()
 	if _chamsFolder and _chamsFolder.Parent then _chamsFolder:Destroy() end; _chamsFolder = nil
 	if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:Destroy() end; _teamChamsFolder = nil
 	if _appState.doorBypass then restoreDoorStates() end; if _appState.fullbright then disableFullbright() end
@@ -860,101 +908,119 @@ local function createKeyUI()
 end
 createKeyUI(); repeat task.wait(0.1) until _keyCorrect
 
--- main UI build
 local mainOk, mainErr = pcall(function()
 
-	local Window = VoidUI:CreateWindow({Name = SETTINGS.WINDOW.NAME, LoadingTitle = SETTINGS.WINDOW.LOADING_TITLE, LoadingSubtitle = SETTINGS.WINDOW.LOADING_SUBTITLE, ToggleKey = SETTINGS.WINDOW.TOGGLE_KEY})
-	local MainTab = Window:CreateTab("Main"); local PlayerTab = Window:CreateTab("Players"); local VisualTab = Window:CreateTab("Visuals"); local MiscTab = Window:CreateTab("Misc")
+local Window = VoidUI:CreateWindow({Name = SETTINGS.WINDOW.NAME, LoadingTitle = SETTINGS.WINDOW.LOADING_TITLE, LoadingSubtitle = SETTINGS.WINDOW.LOADING_SUBTITLE, ToggleKey = SETTINGS.WINDOW.TOGGLE_KEY})
+local MainTab = Window:CreateTab("Main"); local PlayerTab = Window:CreateTab("Players"); local VisualTab = Window:CreateTab("Visuals"); local MiscTab = Window:CreateTab("Misc")
 
-	addConnection("CharAdded", LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.5); if Camera then Camera.FieldOfView = _appState.customFOV end; if not _appState.spectating and not _appState.freecam then local hum = char:WaitForChild("Humanoid", 5); if hum and Camera then Camera.CameraSubject = hum end end; if _appState.hideLocalChar then task.wait(0.3); setLocalCharVisibility(false) end; if _appState.bigHead then task.wait(0.5); setBigHead(true) end end))
+addConnection("CharAdded", LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.5); if Camera then Camera.FieldOfView = _appState.customFOV end; if not _appState.spectating and not _appState.freecam then local hum = char:WaitForChild("Humanoid", 5); if hum and Camera then Camera.CameraSubject = hum end end; if _appState.hideLocalChar then task.wait(0.3); setLocalCharVisibility(false) end; if _appState.bigHead then task.wait(0.5); setBigHead(true) end end))
 
-	MainTab:CreateSection("Bypass")
-	MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
-	MainTab:CreateSection("Movement")
-	MainTab:CreateToggle({Name = "Anti-Taser / Anti-Cuff", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v; Window:Notify({Title = "Void", Content = v and "Anti-restrict active" or "Anti-restrict off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	MainTab:CreateSlider({Name = "Walk Speed", Range = {16, 100}, Increment = 1, Suffix = " ws", CurrentValue = getConfig("customWalkspeed", G.DEFAULT_WALKSPEED), ConfigKey = "customWalkspeed", Tooltip = "Set custom walkspeed value", Callback = function(v) _appState.customWalkspeed = v; local hum = getHumanoid(); if hum and not _appState.freecam then hum.WalkSpeed = v end end})
-	MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suffix = " jp", CurrentValue = getConfig("customJumpPower", G.DEFAULT_JUMPPOWER), ConfigKey = "customJumpPower", Tooltip = "Set custom jump power value", Callback = function(v) local hum = getHumanoid(); if hum then hum.JumpPower = v; hum.UseJumpPower = true end end})
-	MainTab:CreateSection("Teleports")
-	for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
+MainTab:CreateSection("Bypass")
+MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
+MainTab:CreateSection("Movement")
+MainTab:CreateToggle({Name = "Anti-Taser / Anti-Cuff", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v; Window:Notify({Title = "Void", Content = v and "Anti-restrict active" or "Anti-restrict off", Duration = 3, Type = v and "Success" or "Info"}) end})
+MainTab:CreateSlider({Name = "Walk Speed", Range = {16, 100}, Increment = 1, Suffix = " ws", CurrentValue = getConfig("customWalkspeed", G.DEFAULT_WALKSPEED), ConfigKey = "customWalkspeed", Tooltip = "Set custom walkspeed value", Callback = function(v) _appState.customWalkspeed = v; local hum = getHumanoid(); if hum and not _appState.freecam then hum.WalkSpeed = v end end})
+MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suffix = " jp", CurrentValue = getConfig("customJumpPower", G.DEFAULT_JUMPPOWER), ConfigKey = "customJumpPower", Tooltip = "Set custom jump power value", Callback = function(v) local hum = getHumanoid(); if hum then hum.JumpPower = v; hum.UseJumpPower = true end end})
+MainTab:CreateSection("Teleports")
+for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
 
-	PlayerTab:CreateSection("Target")
-	local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Select a player to target", Callback = function(v) _appState.selectedPlayer = v[1] or nil; if _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "Target: " .. _appState.selectedPlayer, Duration = 2, Type = "Info"}) end end})
-	local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherPlayerNames()) end) end
-	addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player) refreshPlayerList(); Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"}); if _appState.espEnabled then task.defer(createESPData, player) end; if _appState.chamsEnabled then task.defer(addChams, player) end; if _appState.teamChams then task.defer(addTeamChams, player) end; if _appState.bigHead then task.delay(1, function() setBigHead(true) end) end end))
-	addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"}) end))
-	PlayerTab:CreateButton({Name = "Refresh Players", Tooltip = "Refresh the player list", Callback = function() refreshPlayerList(); Window:Notify({Title = "Void", Content = "Found " .. #getOtherPlayerNames() .. " players", Duration = 2, Type = "Info"}) end})
-	PlayerTab:CreateSection("Actions")
-	PlayerTab:CreateButton({Name = "Teleport To Player", Tooltip = "Teleport to the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)); Window:Notify({Title = "Void", Content = "Warped to " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
-	PlayerTab:CreateButton({Name = "Spectate Player", Tooltip = "Watch the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true; Window:Notify({Title = "Void", Content = "Watching " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
-	PlayerTab:CreateButton({Name = "Stop Spectating", Tooltip = "Return camera to your character", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false; Window:Notify({Title = "Void", Content = "Returned to self", Duration = 2, Type = "Info"}) end})
-	PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Tooltip = "Continuously teleport behind the selected player", Callback = function(v) _appState.followPlayer = v; if not v then Window:Notify({Title = "Void", Content = "Stopped following", Duration = 2, Type = "Info"}); return end; if not _appState.selectedPlayer then _appState.followPlayer = false; Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; Window:Notify({Title = "Void", Content = "Following " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}); task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
-	PlayerTab:CreateSection("Combat")
-	PlayerTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Makes other players heads bigger for easier hits", Callback = function(v) _appState.bigHead = v; setBigHead(v); Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"}) end})
-
-	VisualTab:CreateSection("Player ESP")
-	VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Tooltip = "Enable the ESP system (required for tracers and boxes)", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
-	if HAS_DRAWING then
-		VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Tooltip = "Draw lines from screen bottom to each player", Callback = function(v) _appState.espTracers = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Tracers active" or "Tracers off", Duration = 3, Type = v and "Success" or "Info"}) end})
-		VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Tooltip = "Draw fixed-size 2D boxes around players", Callback = function(v) _appState.espBoxes = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Boxes active" or "Boxes off", Duration = 3, Type = v and "Success" or "Info"}) end})
+PlayerTab:CreateSection("Target")
+local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Select a player to target", Callback = function(v) _appState.selectedPlayer = v[1] or nil; if _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "Target: " .. _appState.selectedPlayer, Duration = 2, Type = "Info"}) end end})
+local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherPlayerNames()) end) end
+addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player) refreshPlayerList(); Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"}); if _appState.espEnabled then task.defer(createESPData, player) end; if _appState.chamsEnabled then task.defer(addChams, player) end; if _appState.teamChams then task.defer(addTeamChams, player) end; if _appState.bigHead then task.delay(1, function() setBigHead(true) end) end end))
+addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); _originalHitboxes[player] = nil; Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"}) end))
+PlayerTab:CreateButton({Name = "Refresh Players", Tooltip = "Refresh the player list", Callback = function() refreshPlayerList(); Window:Notify({Title = "Void", Content = "Found " .. #getOtherPlayerNames() .. " players", Duration = 2, Type = "Info"}) end})
+PlayerTab:CreateSection("Actions")
+PlayerTab:CreateButton({Name = "Teleport To Player", Tooltip = "Teleport to the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)); Window:Notify({Title = "Void", Content = "Warped to " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
+PlayerTab:CreateButton({Name = "Spectate Player", Tooltip = "Watch the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true; Window:Notify({Title = "Void", Content = "Watching " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
+PlayerTab:CreateButton({Name = "Stop Spectating", Tooltip = "Return camera to your character", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false; Window:Notify({Title = "Void", Content = "Returned to self", Duration = 2, Type = "Info"}) end})
+PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Tooltip = "Continuously teleport behind the selected player", Callback = function(v) _appState.followPlayer = v; if not v then Window:Notify({Title = "Void", Content = "Stopped following", Duration = 2, Type = "Info"}); return end; if not _appState.selectedPlayer then _appState.followPlayer = false; Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; Window:Notify({Title = "Void", Content = "Following " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}); task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
+PlayerTab:CreateSection("Combat")
+PlayerTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Makes other players heads bigger for easier hits", Callback = function(v) _appState.bigHead = v; setBigHead(v); Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"}) end})
+PlayerTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expand player HumanoidRootPart hitboxes for easier hits", Callback = function(v)
+	_appState.hitboxExpander = v
+	if v then
+		Window:Notify({Title = "Void", Content = "Hitbox Expander active", Duration = 3, Type = "Success"})
+	else
+		clearAllHitboxes()
+		Window:Notify({Title = "Void", Content = "Hitbox Expander disabled", Duration = 3, Type = "Info"})
 	end
-	VisualTab:CreateSection("Chams")
-	VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Tooltip = "Highlight players through walls", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end; Window:Notify({Title = "Void", Content = "Chams active", Duration = 3, Type = "Success"}) else clearAllChams(); Window:Notify({Title = "Void", Content = "Chams disabled", Duration = 3, Type = "Info"}) end end})
-	VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Tooltip = "Highlight teammates through walls with their team color", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
-	VisualTab:CreateSection("Colors")
-	VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Tooltip = "Change the ESP drawing color", Callback = function(color) _appState.espColor = color; refreshESP() end})
-	VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Tooltip = "Change the chams outline color", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
-	VisualTab:CreateColorPicker({Name = "Team Chams Outline", Default = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE, ConfigKey = "teamChamsOutlineRGB", Tooltip = "Override team chams outline color", Callback = function(color) _appState.teamChamsOutlineColor = color; refreshTeamChamsColors() end})
-	VisualTab:CreateSection("World")
-	VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Tooltip = "Remove shadows and brighten the world", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Void", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
-	VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Tooltip = "Remove all fog effects", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end; Window:Notify({Title = "Void", Content = v and "No Fog active" or "Fog restored", Duration = 3, Type = v and "Success" or "Info"}) end})
-	VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Tooltip = "Make your own character invisible to yourself", Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v); Window:Notify({Title = "Void", Content = v and "Character hidden" or "Character visible", Duration = 3, Type = v and "Success" or "Info"}) end})
-	VisualTab:CreateSection("Camera")
-	VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Tooltip = "Adjust the camera field of view", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
-	VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Tooltip = "Set the max third person zoom distance", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
-	VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Tooltip = "Detach camera and fly freely", Callback = function(v) _appState.freecam = v; if v then enableFreecam(); Window:Notify({Title = "Void", Content = "Freecam active", Duration = 5, Type = "Success"}) else disableFreecam(); Window:Notify({Title = "Void", Content = "Freecam off", Duration = 2, Type = "Info"}) end end})
+end})
+PlayerTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of the expanded hitbox", Callback = function(v)
+	_appState.hitboxSize = v
+end})
 
-	MiscTab:CreateSection("Protection")
-	MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Tooltip = "Prevents the game from kicking you for inactivity", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)); Window:Notify({Title = "Void", Content = "Anti-AFK active", Duration = 3, Type = "Success"}) else removeConnection("AntiAFK"); Window:Notify({Title = "Void", Content = "Anti-AFK disabled", Duration = 3, Type = "Info"}) end end})
-	MiscTab:CreateToggle({Name = "God Mode", CurrentValue = false, Tooltip = "Continuously restore health to maximum", Callback = function(v) _appState.godMode = v; Window:Notify({Title = "Void", Content = v and "God Mode active" or "God Mode off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	MiscTab:CreateSection("Abilities")
-	MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Tooltip = "Jump infinitely in the air", Callback = function(v) _appState.infJump = v; Window:Notify({Title = "Void", Content = v and "Infinite Jump active" or "Infinite Jump off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	addConnection("InfJump", UserInputService.JumpRequest:Connect(function() if _appState.infJump then local hum = getHumanoid(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
-	MiscTab:CreateToggle({Name = "Click Teleport [Ctrl+Click]", CurrentValue = getConfig("clickTP", false), ConfigKey = "clickTP", Tooltip = "Hold Ctrl and click to teleport to cursor position", Callback = function(v) _appState.clickTP = v; Window:Notify({Title = "Void", Content = v and "Click TP active" or "Click TP off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	local mouse = LocalPlayer:GetMouse(); addConnection("ClickTP", mouse.Button1Down:Connect(function() if _appState.clickTP and UserInputService:IsKeyDown(G.CLICK_TP_LKEY) and mouse.Hit then safeTeleport(CFrame.new(mouse.Hit.Position + G.CLICK_TP_OFFSET)); Window:Notify({Title = "Void", Content = "Warped to cursor", Duration = 1, Type = "Success"}) end end))
-	MiscTab:CreateSection("Character")
-	MiscTab:CreateButton({Name = "Remove Hats", Tooltip = "Remove all accessories from your character", Callback = function() local char = getCharacter(); if char then for _, acc in ipairs(char:GetChildren()) do if acc:IsA("Accessory") then acc:Destroy() end end; Window:Notify({Title = "Void", Content = "Hats removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-	MiscTab:CreateButton({Name = "Remove Shirt/Pants", Tooltip = "Strip clothing from your character", Callback = function() local char = getCharacter(); if char then for _, item in ipairs(char:GetChildren()) do if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end end; Window:Notify({Title = "Void", Content = "Clothing removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-	MiscTab:CreateButton({Name = "Sit", Tooltip = "Force your character to sit", Callback = function() local hum = getHumanoid(); if hum then hum.Sit = true; Window:Notify({Title = "Void", Content = "Now sitting", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-	MiscTab:CreateSection("Server")
-	local _serverHopCooldown = false
-	MiscTab:CreateButton({Name = "Rejoin Server", Tooltip = "Disconnect and rejoin the same server", Callback = function() Window:Notify({Title = "Void", Content = "Rejoining...", Duration = 2, Type = "Info"}); task.delay(1, function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end})
-	MiscTab:CreateButton({Name = "Server Hop", Tooltip = "Find and join a different server", Callback = function() if _serverHopCooldown then Window:Notify({Title = "Void", Content = "Please wait...", Duration = 2, Type = "Warning"}); return end; _serverHopCooldown = true; task.delay(5, function() _serverHopCooldown = false end); Window:Notify({Title = "Void", Content = "Scanning servers...", Duration = 2, Type = "Info"}); local ok, result = pcall(function() return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) end); if not ok or not result or not result.data then Window:Notify({Title = "Void", Content = "Server fetch failed", Duration = 3, Type = "Error"}); return end; for _, server in ipairs(result.data) do if server.id ~= game.JobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then Window:Notify({Title = "Void", Content = "Server found - teleporting", Duration = 2, Type = "Success"}); task.delay(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end); return end end; Window:Notify({Title = "Void", Content = "No available servers", Duration = 3, Type = "Error"}) end})
-	MiscTab:CreateButton({Name = "Copy Server ID", Tooltip = "Copy the current server job ID to clipboard", Callback = function() if setclipboard then setclipboard(game.JobId); Window:Notify({Title = "Void", Content = "Copied to clipboard", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Not supported", Duration = 2, Type = "Error"}) end end})
-	MiscTab:CreateButton({Name = "Reset Character", Tooltip = "Kill your character to respawn", Callback = function() local hum = getHumanoid(); if hum then hum.Health = 0; Window:Notify({Title = "Void", Content = "Resetting...", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-	MiscTab:CreateSection("Config")
-	MiscTab:CreateButton({Name = "Save Config", Tooltip = "Save all current settings to file", Callback = function() saveConfig(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config saved" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
-	MiscTab:CreateButton({Name = "Load Config", Tooltip = "Load settings from saved config file", Callback = function() loadConfig(); applyLoadedConfigs(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config loaded" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
-	MiscTab:CreateSection("Info")
-	MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
-	MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
+VisualTab:CreateSection("Player ESP")
+VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Tooltip = "Enable the ESP system (required for tracers and boxes)", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
+if HAS_DRAWING then
+	VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Tooltip = "Draw lines from screen bottom to each player", Callback = function(v) _appState.espTracers = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Tracers active" or "Tracers off", Duration = 3, Type = v and "Success" or "Info"}) end})
+	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Tooltip = "Draw fixed-size 2D boxes around players", Callback = function(v) _appState.espBoxes = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Boxes active" or "Boxes off", Duration = 3, Type = v and "Success" or "Info"}) end})
+end
+VisualTab:CreateSection("Chams")
+VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Tooltip = "Highlight players through walls", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end; Window:Notify({Title = "Void", Content = "Chams active", Duration = 3, Type = "Success"}) else clearAllChams(); Window:Notify({Title = "Void", Content = "Chams disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Tooltip = "Highlight teammates through walls with their team color", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateSection("Colors")
+VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Tooltip = "Change the ESP drawing color", Callback = function(color) _appState.espColor = color; refreshESP() end})
+VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Tooltip = "Change the chams outline color", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
+VisualTab:CreateColorPicker({Name = "Team Chams Outline", Default = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE, ConfigKey = "teamChamsOutlineRGB", Tooltip = "Override team chams outline color", Callback = function(color) _appState.teamChamsOutlineColor = color; refreshTeamChamsColors() end})
+VisualTab:CreateSection("World")
+VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Tooltip = "Remove shadows and brighten the world", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Void", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
+VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Tooltip = "Remove all fog effects", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end; Window:Notify({Title = "Void", Content = v and "No Fog active" or "Fog restored", Duration = 3, Type = v and "Success" or "Info"}) end})
+VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Tooltip = "Make your own character invisible to yourself", Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v); Window:Notify({Title = "Void", Content = v and "Character hidden" or "Character visible", Duration = 3, Type = v and "Success" or "Info"}) end})
+VisualTab:CreateSection("Camera")
+VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Tooltip = "Adjust the camera field of view", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
+VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Tooltip = "Set the max third person zoom distance", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
+VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Tooltip = "Detach camera and fly freely", Callback = function(v) _appState.freecam = v; if v then enableFreecam(); Window:Notify({Title = "Void", Content = "Freecam active", Duration = 5, Type = "Success"}) else disableFreecam(); Window:Notify({Title = "Void", Content = "Freecam off", Duration = 2, Type = "Info"}) end end})
 
-	Window:StoreTransparencies(); applyLoadedConfigs()
+MiscTab:CreateSection("Protection")
+MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Tooltip = "Prevents the game from kicking you for inactivity", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)); Window:Notify({Title = "Void", Content = "Anti-AFK active", Duration = 3, Type = "Success"}) else removeConnection("AntiAFK"); Window:Notify({Title = "Void", Content = "Anti-AFK disabled", Duration = 3, Type = "Info"}) end end})
+MiscTab:CreateToggle({Name = "God Mode", CurrentValue = false, Tooltip = "Continuously restore health to maximum", Callback = function(v) _appState.godMode = v; Window:Notify({Title = "Void", Content = v and "God Mode active" or "God Mode off", Duration = 3, Type = v and "Success" or "Info"}) end})
+MiscTab:CreateSection("Abilities")
+MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Tooltip = "Jump infinitely in the air", Callback = function(v) _appState.infJump = v; Window:Notify({Title = "Void", Content = v and "Infinite Jump active" or "Infinite Jump off", Duration = 3, Type = v and "Success" or "Info"}) end})
+addConnection("InfJump", UserInputService.JumpRequest:Connect(function() if _appState.infJump then local hum = getHumanoid(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
+MiscTab:CreateToggle({Name = "Click Teleport [Ctrl+Click]", CurrentValue = getConfig("clickTP", false), ConfigKey = "clickTP", Tooltip = "Hold Ctrl and click to teleport to cursor position", Callback = function(v) _appState.clickTP = v; Window:Notify({Title = "Void", Content = v and "Click TP active" or "Click TP off", Duration = 3, Type = v and "Success" or "Info"}) end})
+local mouse = LocalPlayer:GetMouse(); addConnection("ClickTP", mouse.Button1Down:Connect(function() if _appState.clickTP and UserInputService:IsKeyDown(G.CLICK_TP_LKEY) and mouse.Hit then safeTeleport(CFrame.new(mouse.Hit.Position + G.CLICK_TP_OFFSET)); Window:Notify({Title = "Void", Content = "Warped to cursor", Duration = 1, Type = "Success"}) end end))
+MiscTab:CreateSection("Character")
+MiscTab:CreateButton({Name = "Remove Hats", Tooltip = "Remove all accessories from your character", Callback = function() local char = getCharacter(); if char then for _, acc in ipairs(char:GetChildren()) do if acc:IsA("Accessory") then acc:Destroy() end end; Window:Notify({Title = "Void", Content = "Hats removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateButton({Name = "Remove Shirt/Pants", Tooltip = "Strip clothing from your character", Callback = function() local char = getCharacter(); if char then for _, item in ipairs(char:GetChildren()) do if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end end; Window:Notify({Title = "Void", Content = "Clothing removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateButton({Name = "Sit", Tooltip = "Force your character to sit", Callback = function() local hum = getHumanoid(); if hum then hum.Sit = true; Window:Notify({Title = "Void", Content = "Now sitting", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateSection("Server")
+local _serverHopCooldown = false
+MiscTab:CreateButton({Name = "Rejoin Server", Tooltip = "Disconnect and rejoin the same server", Callback = function() Window:Notify({Title = "Void", Content = "Rejoining...", Duration = 2, Type = "Info"}); task.delay(1, function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end})
+MiscTab:CreateButton({Name = "Server Hop", Tooltip = "Find and join a different server", Callback = function() if _serverHopCooldown then Window:Notify({Title = "Void", Content = "Please wait...", Duration = 2, Type = "Warning"}); return end; _serverHopCooldown = true; task.delay(5, function() _serverHopCooldown = false end); Window:Notify({Title = "Void", Content = "Scanning servers...", Duration = 2, Type = "Info"}); local ok, result = pcall(function() return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) end); if not ok or not result or not result.data then Window:Notify({Title = "Void", Content = "Server fetch failed", Duration = 3, Type = "Error"}); return end; for _, server in ipairs(result.data) do if server.id ~= game.JobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then Window:Notify({Title = "Void", Content = "Server found - teleporting", Duration = 2, Type = "Success"}); task.delay(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end); return end end; Window:Notify({Title = "Void", Content = "No available servers", Duration = 3, Type = "Error"}) end})
+MiscTab:CreateButton({Name = "Copy Server ID", Tooltip = "Copy the current server job ID to clipboard", Callback = function() if setclipboard then setclipboard(game.JobId); Window:Notify({Title = "Void", Content = "Copied to clipboard", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Not supported", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateButton({Name = "Reset Character", Tooltip = "Kill your character to respawn", Callback = function() local hum = getHumanoid(); if hum then hum.Health = 0; Window:Notify({Title = "Void", Content = "Resetting...", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateSection("Config")
+MiscTab:CreateButton({Name = "Save Config", Tooltip = "Save all current settings to file", Callback = function() saveConfig(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config saved" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
+MiscTab:CreateButton({Name = "Load Config", Tooltip = "Load settings from saved config file", Callback = function() loadConfig(); applyLoadedConfigs(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config loaded" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
+MiscTab:CreateSection("Info")
+MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
+MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
 
-	addConnection("MainLoop", RunService.Heartbeat:Connect(function()
-		local char = getCharacter(); if not char then return end; local humanoid = getHumanoid()
-		if humanoid then
-			if not _appState.freecam then if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end end
-			if _appState.antiRestrict and humanoid.JumpPower < G.DEFAULT_JUMPPOWER then humanoid.JumpPower = G.DEFAULT_JUMPPOWER end
-			if _appState.godMode then humanoid.Health = humanoid.MaxHealth end
+Window:StoreTransparencies(); applyLoadedConfigs()
+
+addConnection("MainLoop", RunService.Heartbeat:Connect(function()
+	local char = getCharacter(); if not char then return end; local humanoid = getHumanoid()
+	if humanoid then
+		if not _appState.freecam then if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end end
+		if _appState.antiRestrict and humanoid.JumpPower < G.DEFAULT_JUMPPOWER then humanoid.JumpPower = G.DEFAULT_JUMPPOWER end
+		if _appState.godMode then humanoid.Health = humanoid.MaxHealth end
+	end
+	if _appState.antiRestrict then local pGui = LocalPlayer:FindFirstChild("PlayerGui"); if pGui then for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do local gui = pGui:FindFirstChild(guiName); if gui and gui.Enabled then gui.Enabled = false end end end end
+	if _appState.doorBypass then processDoors() end
+	if _appState.espEnabled then updateESP() end
+	if _appState.fullbright then enableFullbright() end
+	if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
+	if _appState.hitboxExpander then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer then
+				expandHitbox(plr, _appState.hitboxSize)
+			end
 		end
-		if _appState.antiRestrict then local pGui = LocalPlayer:FindFirstChild("PlayerGui"); if pGui then for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do local gui = pGui:FindFirstChild(guiName); if gui and gui.Enabled then gui.Enabled = false end end end end
-		if _appState.doorBypass then processDoors() end
-		if _appState.espEnabled then updateESP() end
-		if _appState.fullbright then enableFullbright() end
-		if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
-	end))
+	end
+end))
 
-	Window:Notify({Title = "Void", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
+Window:Notify({Title = "Void", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
 end)
 
 if not mainOk then VoidUI:Notify({Title = "Void", Content = "Init failed: " .. tostring(mainErr):sub(1, 80), Duration = 10, Type = "Error"}) end
