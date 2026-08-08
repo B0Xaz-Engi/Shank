@@ -119,7 +119,7 @@ local SETTINGS = {
 		SPRINT_SPEED = 24,
 		DOOR_FOLDERS = {"Doors", "glass", "CellDoors", "Prison_Fences", "Prison_Gate"},
 		KEY = "<o^q,DO^a-s%Ww^e",
-		OWNER_KEY = "UNBANMME",
+		ADMIN_KEY = "Bannable5",
 		FOLLOW_MIN_DIST = 4,
 		FOLLOW_INTERVAL = 0.15,
 		CLICK_TP_OFFSET = Vector3.new(0, 4, 0),
@@ -731,16 +731,35 @@ local function createKeyUI()
             StatusLbl.Text = "Locked out"
             return 
         end
+    
         local key = InputBox.Text:match("^%s*(.-)%s*$")
-        
-        if key == G.KEY or key == G.OWNER_KEY then 
+    
+        if key == G.KEY then
             _keyCorrect = true
-            if key == G.OWNER_KEY then
-                task.delay(2, function()
-                    VoidUI:Notify({Title = "Void", Content = "Welcome back, Owner!", Duration = 5, Type = "Success"})
-                end)
-            end
-            KGui:Destroy() 
+            KGui:Destroy()
+    
+            task.defer(function()
+                VoidUI:Notify({
+                    Title = "Void",
+                    Content = "Standard key accepted",
+                    Duration = 4,
+                    Type = "Success"
+                })
+            end)
+    
+        elseif key == G.ADMIN_KEY then
+            _keyCorrect = true
+            KGui:Destroy()
+    
+            task.defer(function()
+                VoidUI:Notify({
+                    Title = "Void",
+                    Content = "Admin key accepted",
+                    Duration = 5,
+                    Type = "Success"
+                })
+            end)
+    
         else 
             _keyAttempts += 1
             local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
@@ -1010,7 +1029,16 @@ ConfigTab:CreateSection("Info")
 ConfigTab:CreateLabel({Text = HAS_FILESYSTEM and ("File: " .. SETTINGS.CONFIG.FILE) or "No filesystem - configs won't persist"})
 
 Window:StoreTransparencies()
+
+-- Suppress notifications during config load
+local _suppressNotifs = true
+local _originalNotify = Window.Notify
+Window.Notify = function() end
 applyLoadedConfigs()
+task.delay(1, function()
+    _suppressNotifs = false
+    Window.Notify = _originalNotify
+end)
 
 addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	local char = getCharacter(); if not char then return end
