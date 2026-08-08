@@ -129,54 +129,24 @@ local SETTINGS = {
 		FREECAM_FAST_MULT = 3,
 	},
 	ESP = {
-		DIST_NEAR = 20,
-		DIST_MID = 50,
-		UPDATE_INTERVAL = 3,
+		DIST_NEAR = 20, DIST_MID = 50, UPDATE_INTERVAL = 3,
 		DEFAULT_COLOR = Color3.fromRGB(0, 255, 200),
 		ENEMY_COLOR = Color3.fromRGB(255, 50, 70),
 		ALLY_COLOR = Color3.fromRGB(0, 200, 255),
-		TRACER_THICKNESS = 1.5,
-		TRACER_TRANSPARENCY = 0.4,
-		BOX_THICKNESS = 1.5,
-		BOX_TRANSPARENCY = 0.3,
+		TRACER_THICKNESS = 1.5, TRACER_TRANSPARENCY = 0.4,
+		BOX_THICKNESS = 1.5, BOX_TRANSPARENCY = 0.3,
 	},
-	CHAMS = {
-		FILL_COLOR = Color3.fromRGB(0, 40, 35),
-		FILL_TRANSPARENCY = 0.35,
-		OUTLINE_TRANSPARENCY = 0,
-		DEFAULT_OUTLINE = Color3.fromRGB(0, 255, 200),
-	},
-	TEAM_CHAMS = {
-		FILL_COLOR = Color3.fromRGB(0, 25, 50),
-		FILL_TRANSPARENCY = 0.45,
-		OUTLINE_TRANSPARENCY = 0,
-		DEFAULT_OUTLINE = Color3.fromRGB(0, 150, 255),
-	},
+	CHAMS = {FILL_COLOR = Color3.fromRGB(0, 40, 35), FILL_TRANSPARENCY = 0.35, OUTLINE_TRANSPARENCY = 0, DEFAULT_OUTLINE = Color3.fromRGB(0, 255, 200)},
+	TEAM_CHAMS = {FILL_COLOR = Color3.fromRGB(0, 25, 50), FILL_TRANSPARENCY = 0.45, OUTLINE_TRANSPARENCY = 0, DEFAULT_OUTLINE = Color3.fromRGB(0, 150, 255)},
 	TELEPORT_LOCATIONS = {
-		{"Prison Cells", CFrame.new(920, 98, 2436)},
-		{"Cafeteria", CFrame.new(920, 98, 2290)},
-		{"Prison Yard", CFrame.new(779, 98, 2463)},
-		{"Criminal Base", CFrame.new(-943, 95, 2058)},
-		{"Police HQ", CFrame.new(831, 98, 2284)},
-		{"Parking Lot", CFrame.new(745, 98, 2148)},
-		{"Roof", CFrame.new(845, 130, 2235)},
-		{"Secret Room", CFrame.new(674, 98, 2384)},
+		{"Prison Cells", CFrame.new(920, 98, 2436)}, {"Cafeteria", CFrame.new(920, 98, 2290)},
+		{"Prison Yard", CFrame.new(779, 98, 2463)}, {"Criminal Base", CFrame.new(-943, 95, 2058)},
+		{"Police HQ", CFrame.new(831, 98, 2284)}, {"Parking Lot", CFrame.new(745, 98, 2148)},
+		{"Roof", CFrame.new(845, 130, 2235)}, {"Secret Room", CFrame.new(674, 98, 2384)},
 		{"Tunnels", CFrame.new(918, 80, 2284)},
 	},
-	SCALE = {
-		PC_REF_X = 1920,
-		PC_REF_Y = 1080,
-		PC_MIN = 0.7,
-		PC_MAX = 1.3,
-		MOBILE_REF_X = 420,
-		MOBILE_REF_Y = 700,
-		MOBILE_MIN = 0.65,
-		MOBILE_MAX = 1.2,
-	},
-	CONFIG = {
-		FOLDER = "VoidUI",
-		FILE = "VoidUI/config.json",
-	},
+	SCALE = {PC_REF_X = 1920, PC_REF_Y = 1080, PC_MIN = 0.7, PC_MAX = 1.3, MOBILE_REF_X = 420, MOBILE_REF_Y = 700, MOBILE_MIN = 0.65, MOBILE_MAX = 1.2},
+	CONFIG = {FOLDER = "VoidUI", FILE = "VoidUI/configs.json"},
 }
 
 local T = SETTINGS.THEME
@@ -197,83 +167,38 @@ local _drawingObjects = {}
 local _tooltipFrame = nil
 local _tooltipLabel = nil
 
-local function addConnection(id, conn)
-	if _connections[id] then pcall(function() _connections[id]:Disconnect() end) end
-	_connections[id] = conn
-end
-
-local function removeConnection(id)
-	if _connections[id] then
-		pcall(function() _connections[id]:Disconnect() end)
-		_connections[id] = nil
-	end
-end
-
-local function clearAllDrawings()
-	for _, obj in pairs(_drawingObjects) do pcall(function() obj:Remove() end) end
-	_drawingObjects = {}
-end
+local function addConnection(id, conn) if _connections[id] then pcall(function() _connections[id]:Disconnect() end) end; _connections[id] = conn end
+local function removeConnection(id) if _connections[id] then pcall(function() _connections[id]:Disconnect() end); _connections[id] = nil end end
+local function clearAllDrawings() for _, obj in pairs(_drawingObjects) do pcall(function() obj:Remove() end) end; _drawingObjects = {} end
 
 local function getScale()
 	local vp = Camera.ViewportSize
-	if IS_MOBILE then
-		return math.clamp(math.min(vp.X / SETTINGS.SCALE.MOBILE_REF_X, vp.Y / SETTINGS.SCALE.MOBILE_REF_Y), SETTINGS.SCALE.MOBILE_MIN, SETTINGS.SCALE.MOBILE_MAX)
-	end
+	if IS_MOBILE then return math.clamp(math.min(vp.X / SETTINGS.SCALE.MOBILE_REF_X, vp.Y / SETTINGS.SCALE.MOBILE_REF_Y), SETTINGS.SCALE.MOBILE_MIN, SETTINGS.SCALE.MOBILE_MAX) end
 	return math.clamp(math.min(vp.X / SETTINGS.SCALE.PC_REF_X, vp.Y / SETTINGS.SCALE.PC_REF_Y), SETTINGS.SCALE.PC_MIN, SETTINGS.SCALE.PC_MAX)
 end
 
 local function sn(n) return math.floor(n * getScale()) end
-local function snMobile(n)
-	if IS_MOBILE then return math.floor(n * getScale() * SETTINGS.WINDOW.MOBILE_TOUCH_SCALE) end
-	return sn(n)
-end
+local function snMobile(n) if IS_MOBILE then return math.floor(n * getScale() * SETTINGS.WINDOW.MOBILE_TOUCH_SCALE) end; return sn(n) end
 
 local function mk(class, props)
 	local obj = Instance.new(class)
-	for k, v in pairs(props) do
-		if k ~= "Parent" and k ~= "Children" then obj[k] = v end
-	end
-	if props.Children then
-		for _, child in ipairs(props.Children) do child.Parent = obj end
-	end
+	for k, v in pairs(props) do if k ~= "Parent" and k ~= "Children" then obj[k] = v end end
+	if props.Children then for _, child in ipairs(props.Children) do child.Parent = obj end end
 	if props.Parent then obj.Parent = props.Parent end
 	return obj
 end
 
-local function applyCorner(parent, radius)
-	return mk("UICorner", {CornerRadius = UDim.new(0, radius or 8), Parent = parent})
-end
+local function applyCorner(parent, radius) return mk("UICorner", {CornerRadius = UDim.new(0, radius or 8), Parent = parent}) end
+local function applyStroke(parent, color, thickness, transparency) return mk("UIStroke", {Color = color or T.BORDER, Thickness = thickness or 1, Transparency = transparency or 0, Parent = parent}) end
+local function applyPadding(parent, top, right, bottom, left) return mk("UIPadding", {PaddingTop = UDim.new(0, top or 0), PaddingRight = UDim.new(0, right or 0), PaddingBottom = UDim.new(0, bottom or 0), PaddingLeft = UDim.new(0, left or 0), Parent = parent}) end
+local function applyLayout(parent, gap, direction, hAlign, vAlign) return mk("UIListLayout", {Padding = UDim.new(0, gap or 5), FillDirection = direction or Enum.FillDirection.Vertical, HorizontalAlignment = hAlign or Enum.HorizontalAlignment.Center, VerticalAlignment = vAlign or Enum.VerticalAlignment.Top, SortOrder = Enum.SortOrder.LayoutOrder, Parent = parent}) end
 
-local function applyStroke(parent, color, thickness, transparency)
-	return mk("UIStroke", {Color = color or T.BORDER, Thickness = thickness or 1, Transparency = transparency or 0, Parent = parent})
-end
-
-local function applyPadding(parent, top, right, bottom, left)
-	return mk("UIPadding", {PaddingTop = UDim.new(0, top or 0), PaddingRight = UDim.new(0, right or 0), PaddingBottom = UDim.new(0, bottom or 0), PaddingLeft = UDim.new(0, left or 0), Parent = parent})
-end
-
-local function applyLayout(parent, gap, direction, hAlign, vAlign)
-	return mk("UIListLayout", {Padding = UDim.new(0, gap or 5), FillDirection = direction or Enum.FillDirection.Vertical, HorizontalAlignment = hAlign or Enum.HorizontalAlignment.Center, VerticalAlignment = vAlign or Enum.VerticalAlignment.Top, SortOrder = Enum.SortOrder.LayoutOrder, Parent = parent})
-end
-
-local function tw(obj, info, props)
-	local t = TweenService:Create(obj, info, props)
-	t:Play()
-	return t
-end
-
-local function gradientAccent(parent, startColor, endColor, rotation)
-	return mk("UIGradient", {
-		Color = ColorSequence.new({ColorSequenceKeypoint.new(0, startColor or T.ACCENT), ColorSequenceKeypoint.new(1, endColor or T.ACCENT_ALT)}),
-		Rotation = rotation or 45,
-		Parent = parent
-	})
-end
+local function tw(obj, info, props) local t = TweenService:Create(obj, info, props); t:Play(); return t end
+local function gradientAccent(parent, startColor, endColor, rotation) return mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, startColor or T.ACCENT), ColorSequenceKeypoint.new(1, endColor or T.ACCENT_ALT)}), Rotation = rotation or 45, Parent = parent}) end
 
 local function rippleFx(button, inputX, inputY)
 	local fx = mk("Frame", {BackgroundColor3 = T.ACCENT_LIGHT, BackgroundTransparency = 0.7, Position = UDim2.new(0, inputX - button.AbsolutePosition.X, 0, inputY - button.AbsolutePosition.Y), Size = UDim2.new(0, 0, 0, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 50, Parent = button})
-	applyCorner(fx, 999)
-	button.ClipsDescendants = true
+	applyCorner(fx, 999); button.ClipsDescendants = true
 	local maxS = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2.5
 	local t = tw(fx, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, maxS, 0, maxS), BackgroundTransparency = 1})
 	t.Completed:Once(function() fx:Destroy() end)
@@ -282,59 +207,64 @@ end
 local function fadeOutAndDestroy(frame, duration)
 	local info = TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quint)
 	tw(frame, info, {BackgroundTransparency = 1})
-	for _, child in ipairs(frame:GetDescendants()) do
-		pcall(function()
-			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
-			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
-			elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1})
-			elseif child:IsA("ImageLabel") then tw(child, A.QUICK, {ImageTransparency = 1}) end
-		end)
-	end
+	for _, child in ipairs(frame:GetDescendants()) do pcall(function()
+		if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
+		elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
+		elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1})
+		elseif child:IsA("ImageLabel") then tw(child, A.QUICK, {ImageTransparency = 1}) end
+	end) end
 	task.delay(duration or 0.3, function() if frame and frame.Parent then frame:Destroy() end end)
 end
 
 local function makeDragHandler(target, handle)
 	local dragging, dragStart, startPos = false, nil, nil
-	handle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true; dragStart = input.Position; startPos = target.Position
-		end
-	end)
-	addConnection("drag_move_" .. target.Name, UserInputService.InputChanged:Connect(function(input)
-		if not dragging or not dragStart or not startPos then return end
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			local delta = input.Position - dragStart
-			tw(target, TweenInfo.new(0.08, Enum.EasingStyle.Quint), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)})
-		end
-	end))
-	addConnection("drag_end_" .. target.Name, UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false; dragStart = nil; startPos = nil end
-	end))
+	handle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; dragStart = input.Position; startPos = target.Position end end)
+	addConnection("drag_move_" .. target.Name, UserInputService.InputChanged:Connect(function(input) if not dragging or not dragStart or not startPos then return end; if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then local delta = input.Position - dragStart; tw(target, TweenInfo.new(0.08, Enum.EasingStyle.Quint), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}) end end))
+	addConnection("drag_end_" .. target.Name, UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false; dragStart = nil; startPos = nil end end))
 end
 
-local function playNotifSound()
-	pcall(function()
-		local sound = Instance.new("Sound")
-		sound.SoundId = SETTINGS.NOTIF.SOUND_ID
-		sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME
-		sound.PlaybackSpeed = SETTINGS.NOTIF.SOUND_PITCH_MIN + math.random() * (SETTINGS.NOTIF.SOUND_PITCH_MAX - SETTINGS.NOTIF.SOUND_PITCH_MIN)
-		sound.Parent = SoundService
-		sound:Play()
-		sound.Ended:Once(function() sound:Destroy() end)
-		task.delay(3, function() if sound and sound.Parent then sound:Destroy() end end)
-	end)
-end
+local function playNotifSound() pcall(function() local sound = Instance.new("Sound"); sound.SoundId = SETTINGS.NOTIF.SOUND_ID; sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME; sound.PlaybackSpeed = SETTINGS.NOTIF.SOUND_PITCH_MIN + math.random() * (SETTINGS.NOTIF.SOUND_PITCH_MAX - SETTINGS.NOTIF.SOUND_PITCH_MIN); sound.Parent = SoundService; sound:Play(); sound.Ended:Once(function() sound:Destroy() end); task.delay(3, function() if sound and sound.Parent then sound:Destroy() end end) end) end
 
-local _configData = {}
-local _configCallbacks = {}
+-- Config System (multi-config with named profiles)
+local _allConfigs = {} -- {configName = {key=value,...}, ...}
+local _configCallbacks = {} -- {key = callback}
+local _currentConfigData = {} -- active settings snapshot
 
 local function ensureConfigFolder() if not HAS_FILESYSTEM then return false end; pcall(function() if not isfolder(SETTINGS.CONFIG.FOLDER) then makefolder(SETTINGS.CONFIG.FOLDER) end end); return true end
-local function saveConfig() if not HAS_FILESYSTEM then return end; ensureConfigFolder(); pcall(function() writefile(SETTINGS.CONFIG.FILE, HttpService:JSONEncode(_configData)) end) end
-local function loadConfig() if not HAS_FILESYSTEM then return end; pcall(function() if isfile(SETTINGS.CONFIG.FILE) then local raw = readfile(SETTINGS.CONFIG.FILE); local parsed = HttpService:JSONDecode(raw); if type(parsed) == "table" then _configData = parsed end end end) end
-local function registerConfig(key, defaultVal, callback) _configCallbacks[key] = callback; if _configData[key] == nil then _configData[key] = defaultVal end end
-local function setConfig(key, value) _configData[key] = value; saveConfig() end
-local function getConfig(key, default) if _configData[key] ~= nil then return _configData[key] end; return default end
-local function applyLoadedConfigs() for key, callback in pairs(_configCallbacks) do if _configData[key] ~= nil then pcall(callback, _configData[key]) end end end
+local function saveAllConfigs() if not HAS_FILESYSTEM then return end; ensureConfigFolder(); pcall(function() writefile(SETTINGS.CONFIG.FILE, HttpService:JSONEncode(_allConfigs)) end) end
+local function loadAllConfigs() if not HAS_FILESYSTEM then return end; pcall(function() if isfile(SETTINGS.CONFIG.FILE) then local raw = readfile(SETTINGS.CONFIG.FILE); local parsed = HttpService:JSONDecode(raw); if type(parsed) == "table" then _allConfigs = parsed end end end) end
+local function getConfigNames() local names = {}; for name in pairs(_allConfigs) do table.insert(names, name) end; table.sort(names); return names end
+local function registerConfig(key, defaultVal, callback) _configCallbacks[key] = callback; if _currentConfigData[key] == nil then _currentConfigData[key] = defaultVal end end
+local function setConfig(key, value) _currentConfigData[key] = value end
+local function getConfig(key, default) if _currentConfigData[key] ~= nil then return _currentConfigData[key] end; return default end
+
+local function snapshotCurrentConfig()
+	local snapshot = {}
+	for k, v in pairs(_currentConfigData) do snapshot[k] = v end
+	return snapshot
+end
+
+local function applyConfigSnapshot(snapshot)
+	if type(snapshot) ~= "table" then return end
+	for k, v in pairs(snapshot) do _currentConfigData[k] = v end
+	for key, callback in pairs(_configCallbacks) do
+		if snapshot[key] ~= nil then pcall(callback, snapshot[key]) end
+	end
+end
+
+local function applyLoadedConfigs()
+	for key, callback in pairs(_configCallbacks) do
+		if _currentConfigData[key] ~= nil then pcall(callback, _currentConfigData[key]) end
+	end
+end
+
+-- Try to load a "Default" config on startup
+local function loadDefaultOnStartup()
+	loadAllConfigs()
+	if _allConfigs["Default"] then
+		applyConfigSnapshot(_allConfigs["Default"])
+	end
+end
 
 local function createTooltip(gui)
 	if _tooltipFrame and _tooltipFrame.Parent then _tooltipFrame:Destroy() end
@@ -343,22 +273,9 @@ local function createTooltip(gui)
 	_tooltipLabel = mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, -14, 1, 0), Position = UDim2.new(0, 7, 0, 0), Text = "", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, ZIndex = 101, Parent = _tooltipFrame})
 end
 
-local function showTooltip(text, absX, absY)
-	if not _tooltipFrame or not text or text == "" then if _tooltipFrame then _tooltipFrame.Visible = false end; return end
-	_tooltipLabel.Text = text
-	local textWidth = math.min(260, #text * 6 + 24)
-	local lines = math.ceil(#text / 40)
-	local textHeight = math.max(28, lines * 15 + 10)
-	_tooltipFrame.Size = UDim2.new(0, textWidth, 0, textHeight)
-	_tooltipFrame.Position = UDim2.new(0, absX + 14, 0, absY - textHeight - 6)
-	_tooltipFrame.Visible = true
-end
+local function showTooltip(text, absX, absY) if not _tooltipFrame or not text or text == "" then if _tooltipFrame then _tooltipFrame.Visible = false end; return end; _tooltipLabel.Text = text; local textWidth = math.min(260, #text * 6 + 24); local lines = math.ceil(#text / 40); local textHeight = math.max(28, lines * 15 + 10); _tooltipFrame.Size = UDim2.new(0, textWidth, 0, textHeight); _tooltipFrame.Position = UDim2.new(0, absX + 14, 0, absY - textHeight - 6); _tooltipFrame.Visible = true end
 local function hideTooltip() if _tooltipFrame then _tooltipFrame.Visible = false end end
-local function attachTooltip(element, text)
-	if not text or text == "" then return end
-	element.MouseEnter:Connect(function() local pos = element.AbsolutePosition; showTooltip(text, pos.X + element.AbsoluteSize.X / 2, pos.Y) end)
-	element.MouseLeave:Connect(hideTooltip)
-end
+local function attachTooltip(element, text) if not text or text == "" then return end; element.MouseEnter:Connect(function() local pos = element.AbsolutePosition; showTooltip(text, pos.X + element.AbsoluteSize.X / 2, pos.Y) end); element.MouseLeave:Connect(hideTooltip) end
 
 local VoidUI = {}
 
@@ -392,12 +309,7 @@ function VoidUI:Notify(cfg)
 	task.delay(0.05, function() tw(titleLbl, A.SNAPPY, {TextTransparency = 0}) end); task.delay(0.1, function() tw(contentLbl, A.SNAPPY, {TextTransparency = 0}) end)
 	tw(progFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
 	local dismissed = false
-	local function dismiss()
-		if dismissed then return end; dismissed = true; _activeNotifCount = math.max(0, _activeNotifCount - 1)
-		tw(titleLbl, A.QUICK, {TextTransparency = 1}); tw(contentLbl, A.QUICK, {TextTransparency = 1}); tw(notifStroke, A.QUICK, {Transparency = 1})
-		local t = tw(notif, A.SNAPPY, {Size = UDim2.new(0, SETTINGS.NOTIF.WIDTH, 0, 0), BackgroundTransparency = 1})
-		t.Completed:Once(function() if notif and notif.Parent then notif:Destroy() end end)
-	end
+	local function dismiss() if dismissed then return end; dismissed = true; _activeNotifCount = math.max(0, _activeNotifCount - 1); tw(titleLbl, A.QUICK, {TextTransparency = 1}); tw(contentLbl, A.QUICK, {TextTransparency = 1}); tw(notifStroke, A.QUICK, {Transparency = 1}); local t = tw(notif, A.SNAPPY, {Size = UDim2.new(0, SETTINGS.NOTIF.WIDTH, 0, 0), BackgroundTransparency = 1}); t.Completed:Once(function() if notif and notif.Parent then notif:Destroy() end end) end
 	closeBtn.MouseButton1Click:Connect(dismiss); task.delay(duration, dismiss); return {Dismiss = dismiss}
 end
 
@@ -411,14 +323,8 @@ end
 
 local function cardHover(card, cardStroke, opts)
 	opts = opts or {}; local origSize = card.Size
-	card.MouseEnter:Connect(function()
-		tw(card, A.HOVER_GROW, {BackgroundColor3 = T.BG_CARD_HOVER, Size = UDim2.new(origSize.X.Scale, origSize.X.Offset + sn(2), origSize.Y.Scale, origSize.Y.Offset + sn(2)), Position = UDim2.new(card.Position.X.Scale, card.Position.X.Offset - sn(1), card.Position.Y.Scale, card.Position.Y.Offset - sn(1))})
-		tw(cardStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.15})
-	end)
-	card.MouseLeave:Connect(function()
-		tw(card, A.HOVER_SHRINK, {BackgroundColor3 = opts.bg or T.BG_CARD, Size = origSize, Position = UDim2.new(card.Position.X.Scale, sn(2), card.Position.Y.Scale, sn(1))})
-		tw(cardStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.35})
-	end)
+	card.MouseEnter:Connect(function() tw(card, A.HOVER_GROW, {BackgroundColor3 = T.BG_CARD_HOVER, Size = UDim2.new(origSize.X.Scale, origSize.X.Offset + sn(2), origSize.Y.Scale, origSize.Y.Offset + sn(2)), Position = UDim2.new(card.Position.X.Scale, card.Position.X.Offset - sn(1), card.Position.Y.Scale, card.Position.Y.Offset - sn(1))}); tw(cardStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.15}) end)
+	card.MouseLeave:Connect(function() tw(card, A.HOVER_SHRINK, {BackgroundColor3 = opts.bg or T.BG_CARD, Size = origSize, Position = UDim2.new(card.Position.X.Scale, sn(2), card.Position.Y.Scale, sn(1))}); tw(cardStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.35}) end)
 end
 
 function VoidUI:CreateWindow(cfg)
@@ -449,81 +355,41 @@ function VoidUI:CreateWindow(cfg)
 	mk("Frame", {BackgroundColor3 = T.BORDER_DIM, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, 0), Parent = Topbar})
 	mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.5, 0, 1, 0), Text = winTitle, TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(15), TextXAlignment = Enum.TextXAlignment.Left, Parent = Topbar})
 	local btnSize = sn(26)
-	local function windowBtn(text, xOff)
-		local btn = mk("TextButton", {BackgroundColor3 = T.BG3, BackgroundTransparency = 0.3, Size = UDim2.new(0, btnSize, 0, btnSize), Position = UDim2.new(1, xOff, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = text, TextColor3 = T.TEXT_SUB, Font = UI_FONT_BOLD, TextSize = sn(14), AutoButtonColor = false, Parent = Topbar})
-		applyCorner(btn, sn(6))
-		btn.MouseEnter:Connect(function() tw(btn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, BackgroundTransparency = 0, TextColor3 = T.TEXT_BRIGHT, Size = UDim2.new(0, btnSize + sn(2), 0, btnSize + sn(2))}) end)
-		btn.MouseLeave:Connect(function() tw(btn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, BackgroundTransparency = 0.3, TextColor3 = T.TEXT_SUB, Size = UDim2.new(0, btnSize, 0, btnSize)}) end)
-		return btn
-	end
+	local function windowBtn(text, xOff) local btn = mk("TextButton", {BackgroundColor3 = T.BG3, BackgroundTransparency = 0.3, Size = UDim2.new(0, btnSize, 0, btnSize), Position = UDim2.new(1, xOff, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = text, TextColor3 = T.TEXT_SUB, Font = UI_FONT_BOLD, TextSize = sn(14), AutoButtonColor = false, Parent = Topbar}); applyCorner(btn, sn(6)); btn.MouseEnter:Connect(function() tw(btn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, BackgroundTransparency = 0, TextColor3 = T.TEXT_BRIGHT, Size = UDim2.new(0, btnSize + sn(2), 0, btnSize + sn(2))}) end); btn.MouseLeave:Connect(function() tw(btn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, BackgroundTransparency = 0.3, TextColor3 = T.TEXT_SUB, Size = UDim2.new(0, btnSize, 0, btnSize)}) end); return btn end
 	local CloseBtn = windowBtn("×", -sn(10) - btnSize); local MinBtn = windowBtn("–", -sn(16) - btnSize * 2)
 	makeDragHandler(Main, Topbar)
 	local windowOpen = true; local windowMin = false
 
-	local function closeWindow()
-		if not windowOpen then return end; windowOpen = false
-		tw(Main, A.SMOOTH, {Size = UDim2.new(0, wW * 0.95, 0, wH * 0.95), BackgroundTransparency = 1}); tw(mainStroke, A.QUICK, {Transparency = 1})
-		for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
-			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
-			elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1}) end
-		end) end
-		task.delay(0.3, function() if Main and Main.Parent then Main.Visible = false end end)
-	end
-	local function openWindow()
-		if windowOpen then return end; windowOpen = true; windowMin = false; Main.Visible = true; Main.BackgroundTransparency = 0; Main.Size = UDim2.new(0, wW * 0.93, 0, wH * 0.93)
-		for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child.TextTransparency = child:GetAttribute("_oTT") or 0
-			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child.BackgroundTransparency = child:GetAttribute("_oBT") or 0
-			elseif child:IsA("UIStroke") then child.Transparency = child:GetAttribute("_oST") or 0 end
-		end) end
-		tw(Main, A.POP, {Size = origSize, BackgroundTransparency = 0}); tw(mainStroke, A.SNAPPY, {Transparency = 0.1})
-	end
+	local function closeWindow() if not windowOpen then return end; windowOpen = false; tw(Main, A.SMOOTH, {Size = UDim2.new(0, wW * 0.95, 0, wH * 0.95), BackgroundTransparency = 1}); tw(mainStroke, A.QUICK, {Transparency = 1}); for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1}) elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1}) elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1}) end end) end; task.delay(0.3, function() if Main and Main.Parent then Main.Visible = false end end) end
+	local function openWindow() if windowOpen then return end; windowOpen = true; windowMin = false; Main.Visible = true; Main.BackgroundTransparency = 0; Main.Size = UDim2.new(0, wW * 0.93, 0, wH * 0.93); for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child.TextTransparency = child:GetAttribute("_oTT") or 0 elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child.BackgroundTransparency = child:GetAttribute("_oBT") or 0 elseif child:IsA("UIStroke") then child.Transparency = child:GetAttribute("_oST") or 0 end end) end; tw(Main, A.POP, {Size = origSize, BackgroundTransparency = 0}); tw(mainStroke, A.SNAPPY, {Transparency = 0.1}) end
 
 	CloseBtn.MouseButton1Click:Connect(function() closeWindow(); VoidUI:Notify({Title = "Void", Content = "Press " .. toggleKey.Name .. " to reopen", Duration = 3, Type = "Info"}) end)
 	MinBtn.MouseButton1Click:Connect(function() windowMin = not windowMin; tw(Main, A.SMOOTH, {Size = windowMin and UDim2.new(0, wW, 0, topH + 2) or origSize}) end)
 	addConnection("WinToggle", UserInputService.InputBegan:Connect(function(input, gpe) if gpe then return end; if input.KeyCode == toggleKey then if windowOpen then closeWindow() else openWindow() end end end))
 
-	if IS_MOBILE then
-		local inset = GuiService:GetGuiInset()
-		local mobBtn = mk("TextButton", {Name = "MobileToggle", BackgroundColor3 = T.BG2, Size = UDim2.new(0, sn(48), 0, sn(40)), Position = UDim2.new(0, sn(8), 0, sn(inset.Y + 8)), Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(11), AutoButtonColor = false, Parent = Gui})
-		applyCorner(mobBtn, sn(10)); applyStroke(mobBtn, T.BORDER, 1, 0.15)
-		local mDragging, mDragStart, mDragPos = false, nil, nil
-		mobBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch then mDragging = true; mDragStart = input.Position; mDragPos = mobBtn.Position end end)
-		UserInputService.InputChanged:Connect(function(input) if mDragging and input.UserInputType == Enum.UserInputType.Touch and mDragStart then local d = input.Position - mDragStart; if d.Magnitude > 10 then mobBtn.Position = UDim2.new(mDragPos.X.Scale, mDragPos.X.Offset + d.X, mDragPos.Y.Scale, mDragPos.Y.Offset + d.Y) end end end)
-		UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch and mDragging then if mDragStart and (input.Position - mDragStart).Magnitude <= 10 then if windowOpen then closeWindow() else openWindow() end end; mDragging = false; mDragStart = nil; mDragPos = nil end end)
-	end
+	if IS_MOBILE then local inset = GuiService:GetGuiInset(); local mobBtn = mk("TextButton", {Name = "MobileToggle", BackgroundColor3 = T.BG2, Size = UDim2.new(0, sn(48), 0, sn(40)), Position = UDim2.new(0, sn(8), 0, sn(inset.Y + 8)), Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(11), AutoButtonColor = false, Parent = Gui}); applyCorner(mobBtn, sn(10)); applyStroke(mobBtn, T.BORDER, 1, 0.15); local mDragging, mDragStart, mDragPos = false, nil, nil; mobBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch then mDragging = true; mDragStart = input.Position; mDragPos = mobBtn.Position end end); UserInputService.InputChanged:Connect(function(input) if mDragging and input.UserInputType == Enum.UserInputType.Touch and mDragStart then local d = input.Position - mDragStart; if d.Magnitude > 10 then mobBtn.Position = UDim2.new(mDragPos.X.Scale, mDragPos.X.Offset + d.X, mDragPos.Y.Scale, mDragPos.Y.Offset + d.Y) end end end); UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch and mDragging then if mDragStart and (input.Position - mDragStart).Magnitude <= 10 then if windowOpen then closeWindow() else openWindow() end end; mDragging = false; mDragStart = nil; mDragPos = nil end end) end
 
 	local TabStrip = mk("Frame", {Name = "TabStrip", BackgroundColor3 = T.BG2, Size = UDim2.new(0, tabW, 1, -topH - 1), Position = UDim2.new(0, 0, 0, topH + 1), BorderSizePixel = 0, Parent = Main})
 	mk("Frame", {BackgroundColor3 = T.BORDER_DIM, Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, 0, 0, 0), BorderSizePixel = 0, Parent = TabStrip})
-	local TabScroll = mk("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = TabStrip})
-	applyLayout(TabScroll, sn(6)); applyPadding(TabScroll, sn(10), sn(8), sn(10), sn(8))
+	local TabScroll = mk("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = TabStrip}); applyLayout(TabScroll, sn(6)); applyPadding(TabScroll, sn(10), sn(8), sn(10), sn(8))
 	local ContentArea = mk("Frame", {Name = "Content", BackgroundTransparency = 1, Size = UDim2.new(1, -tabW, 1, -topH - 1), Position = UDim2.new(0, tabW, 0, topH + 1), ClipsDescendants = true, Parent = Main})
 	local allTabs = {}; local allTabBtns = {}; local activeTab = nil
 	local WinObj = {}; WinObj._gui = Gui; WinObj._main = Main
 	function WinObj:Notify(notifCfg) VoidUI:Notify(notifCfg) end
-	function WinObj:StoreTransparencies() task.defer(function() for _, child in ipairs(Main:GetDescendants()) do pcall(function()
-		if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child:SetAttribute("_oTT", child.TextTransparency)
-		elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child:SetAttribute("_oBT", child.BackgroundTransparency)
-		elseif child:IsA("UIStroke") then child:SetAttribute("_oST", child.Transparency) end
-	end) end end) end
+	function WinObj:StoreTransparencies() task.defer(function() for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child:SetAttribute("_oTT", child.TextTransparency) elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child:SetAttribute("_oBT", child.BackgroundTransparency) elseif child:IsA("UIStroke") then child:SetAttribute("_oST", child.Transparency) end end) end end) end
 
 	function WinObj:CreateTab(name)
 		local tabData = {_name = name, _elements = {}, _searchElements = {}}
 		local pageWrapper = mk("Frame", {Name = "PageWrap_" .. name, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, Parent = ContentArea})
-		local searchBar = mk("TextBox", {BackgroundColor3 = T.BG_INPUT, Size = UDim2.new(1, -sn(24), 0, sn(30)), Position = UDim2.new(0, sn(12), 0, sn(10)), Text = "", PlaceholderText = "Search", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11), ClearTextOnFocus = false, Parent = pageWrapper})
-		applyCorner(searchBar, sn(8)); local searchStroke = applyStroke(searchBar, T.BORDER_DIM, 1, 0.3)
-		local page = mk("ScrollingFrame", {Name = "Page_" .. name, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -sn(48)), Position = UDim2.new(0, 0, 0, sn(46)), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = sn(3), ScrollBarImageColor3 = T.SCROLL, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = pageWrapper})
-		applyLayout(page, sn(4)); applyPadding(page, sn(4), sn(10), sn(12), sn(10))
+		local searchBar = mk("TextBox", {BackgroundColor3 = T.BG_INPUT, Size = UDim2.new(1, -sn(24), 0, sn(30)), Position = UDim2.new(0, sn(12), 0, sn(10)), Text = "", PlaceholderText = "Search", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11), ClearTextOnFocus = false, Parent = pageWrapper}); applyCorner(searchBar, sn(8)); local searchStroke = applyStroke(searchBar, T.BORDER_DIM, 1, 0.3)
+		local page = mk("ScrollingFrame", {Name = "Page_" .. name, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -sn(48)), Position = UDim2.new(0, 0, 0, sn(46)), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = sn(3), ScrollBarImageColor3 = T.SCROLL, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = pageWrapper}); applyLayout(page, sn(4)); applyPadding(page, sn(4), sn(10), sn(12), sn(10))
 		tabData._page = page; tabData._wrapper = pageWrapper
 		searchBar:GetPropertyChangedSignal("Text"):Connect(function() local query = searchBar.Text:lower(); for _, entry in ipairs(tabData._searchElements) do entry.frame.Visible = query == "" or entry.name:lower():find(query, 1, true) ~= nil end end)
-		searchBar.Focused:Connect(function() tw(searchStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end)
-		searchBar.FocusLost:Connect(function() tw(searchStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
+		searchBar.Focused:Connect(function() tw(searchStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); searchBar.FocusLost:Connect(function() tw(searchStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
 
 		local tabBtnWrap = mk("Frame", {Name = "TabWrap_" .. name, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(40)), Parent = TabScroll})
 		local tabGlow = mk("Frame", {Name = "Glow", BackgroundColor3 = T.TAB_GLOW, BackgroundTransparency = 1, Size = UDim2.new(1, sn(8), 0, sn(44)), Position = UDim2.new(0.5, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 0, Parent = tabBtnWrap}); applyCorner(tabGlow, sn(12))
-		local tabBtn = mk("TextButton", {Name = "Tab_" .. name, BackgroundColor3 = T.BG3, BackgroundTransparency = 0.15, Size = UDim2.new(1, 0, 0, sn(36)), Position = UDim2.new(0, 0, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = name, TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 2, Parent = tabBtnWrap})
-		applyCorner(tabBtn, sn(8)); applyPadding(tabBtn, 0, sn(10), 0, sn(14))
+		local tabBtn = mk("TextButton", {Name = "Tab_" .. name, BackgroundColor3 = T.BG3, BackgroundTransparency = 0.15, Size = UDim2.new(1, 0, 0, sn(36)), Position = UDim2.new(0, 0, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = name, TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 2, Parent = tabBtnWrap}); applyCorner(tabBtn, sn(8)); applyPadding(tabBtn, 0, sn(10), 0, sn(14))
 		table.insert(allTabs, tabData); table.insert(allTabBtns, {btn = tabBtn, glow = tabGlow, wrapper = pageWrapper, data = tabData})
 
 		local function selectTab() activeTab = tabData; for _, tb in ipairs(allTabBtns) do local isActive = tb.data == tabData; tb.wrapper.Visible = isActive; tw(tb.btn, A.SMOOTH, {BackgroundColor3 = isActive and T.BG_CARD_ACTIVE or T.BG3, BackgroundTransparency = isActive and 0 or 0.15, TextColor3 = isActive and T.TEXT_BRIGHT or T.TEXT_SUB}); tw(tb.glow, A.SLOW, {BackgroundTransparency = isActive and 0.82 or 1}) end end
@@ -535,114 +401,27 @@ function VoidUI:CreateWindow(cfg)
 
 		function tabData:CreateSection(title) local sec = mk("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(26)), Parent = page}); mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, sn(4), 0, 0), Text = title, TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = sec}); trackElement(sec, title); return sec end
 
-		function tabData:CreateButton(elementCfg)
-			elementCfg = elementCfg or {}; local wrapper, card, cs = buildCard(page, 38)
-			local btn = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = elementCfg.Name or "Button", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, Parent = card}); applyPadding(btn, 0, sn(14), 0, sn(16))
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
-			btn.MouseButton1Click:Connect(function() rippleFx(btn, btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2, btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2); tw(cs, A.QUICK, {Color = T.ACCENT, Transparency = 0}); tw(card, A.QUICK, {BackgroundColor3 = T.BG_CARD_ACTIVE}); task.delay(0.25, function() tw(cs, A.SMOOTH, {Color = T.BORDER_DIM, Transparency = 0.35}); tw(card, A.SMOOTH, {BackgroundColor3 = T.BG_CARD}) end); if elementCfg.Callback then task.spawn(elementCfg.Callback) end end)
-			trackElement(wrapper, elementCfg.Name or "Button"); return wrapper
-		end
+		function tabData:CreateButton(elementCfg) elementCfg = elementCfg or {}; local wrapper, card, cs = buildCard(page, 38); local btn = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = elementCfg.Name or "Button", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, Parent = card}); applyPadding(btn, 0, sn(14), 0, sn(16)); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; btn.MouseButton1Click:Connect(function() rippleFx(btn, btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2, btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2); tw(cs, A.QUICK, {Color = T.ACCENT, Transparency = 0}); tw(card, A.QUICK, {BackgroundColor3 = T.BG_CARD_ACTIVE}); task.delay(0.25, function() tw(cs, A.SMOOTH, {Color = T.BORDER_DIM, Transparency = 0.35}); tw(card, A.SMOOTH, {BackgroundColor3 = T.BG_CARD}) end); if elementCfg.Callback then task.spawn(elementCfg.Callback) end end); trackElement(wrapper, elementCfg.Name or "Button"); return wrapper end
 
-		function tabData:CreateToggle(elementCfg)
-			elementCfg = elementCfg or {}; local enabled = elementCfg.CurrentValue or false; local togObj = {}
-			local wrapper, card, cs = buildCard(page, IS_MOBILE and 44 or 38)
-			local btn = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = "", AutoButtonColor = false, Parent = card})
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(1, -sn(88), 1, 0), Text = elementCfg.Name or "Toggle", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = btn})
-			local trackW, trackH, knobSize = snMobile(36), snMobile(18), snMobile(14)
-			local track = mk("Frame", {BackgroundColor3 = enabled and T.TOGGLE_ON or T.TOGGLE_OFF, BackgroundTransparency = enabled and 0.5 or 0, Size = UDim2.new(0, trackW, 0, trackH), Position = UDim2.new(1, -sn(50), 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = btn}); applyCorner(track, math.floor(trackH / 2)); if enabled then gradientAccent(track, T.ACCENT, T.ACCENT_ALT, 90) end
-			local knob = mk("Frame", {BackgroundColor3 = enabled and T.TOGGLE_KNOB or T.TOGGLE_KNOB_OFF, Size = UDim2.new(0, knobSize, 0, knobSize), Position = enabled and UDim2.new(1, -knobSize - 2, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = track}); applyCorner(knob, math.floor(knobSize / 2))
-			local function updateVisual() tw(track, A.SMOOTH, {BackgroundColor3 = enabled and T.TOGGLE_ON or T.TOGGLE_OFF, BackgroundTransparency = enabled and 0.5 or 0}); tw(knob, A.SMOOTH, {Position = enabled and UDim2.new(1, -knobSize - 2, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = enabled and T.TOGGLE_KNOB or T.TOGGLE_KNOB_OFF}); tw(cs, A.SMOOTH, {Color = enabled and T.BORDER_GLOW or T.BORDER_DIM, Transparency = enabled and 0.2 or 0.35}); for _, child in ipairs(track:GetChildren()) do if child:IsA("UIGradient") then child:Destroy() end end; if enabled then gradientAccent(track, T.ACCENT, T.ACCENT_ALT, 90) end end
-			btn.MouseButton1Click:Connect(function() enabled = not enabled; updateVisual(); if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, enabled) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end)
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
-			if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, enabled, function(val) enabled = val; updateVisual(); if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end) end
-			function togObj:Set(value) enabled = value; updateVisual(); if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, enabled) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end
-			trackElement(wrapper, elementCfg.Name or "Toggle"); return togObj
-		end
+		function tabData:CreateToggle(elementCfg) elementCfg = elementCfg or {}; local enabled = elementCfg.CurrentValue or false; local togObj = {}; local wrapper, card, cs = buildCard(page, IS_MOBILE and 44 or 38); local btn = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Text = "", AutoButtonColor = false, Parent = card}); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(1, -sn(88), 1, 0), Text = elementCfg.Name or "Toggle", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = btn}); local trackW, trackH, knobSize = snMobile(36), snMobile(18), snMobile(14); local track = mk("Frame", {BackgroundColor3 = enabled and T.TOGGLE_ON or T.TOGGLE_OFF, BackgroundTransparency = enabled and 0.5 or 0, Size = UDim2.new(0, trackW, 0, trackH), Position = UDim2.new(1, -sn(50), 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = btn}); applyCorner(track, math.floor(trackH / 2)); if enabled then gradientAccent(track, T.ACCENT, T.ACCENT_ALT, 90) end; local knob = mk("Frame", {BackgroundColor3 = enabled and T.TOGGLE_KNOB or T.TOGGLE_KNOB_OFF, Size = UDim2.new(0, knobSize, 0, knobSize), Position = enabled and UDim2.new(1, -knobSize - 2, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = track}); applyCorner(knob, math.floor(knobSize / 2)); local function updateVisual() tw(track, A.SMOOTH, {BackgroundColor3 = enabled and T.TOGGLE_ON or T.TOGGLE_OFF, BackgroundTransparency = enabled and 0.5 or 0}); tw(knob, A.SMOOTH, {Position = enabled and UDim2.new(1, -knobSize - 2, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = enabled and T.TOGGLE_KNOB or T.TOGGLE_KNOB_OFF}); tw(cs, A.SMOOTH, {Color = enabled and T.BORDER_GLOW or T.BORDER_DIM, Transparency = enabled and 0.2 or 0.35}); for _, child in ipairs(track:GetChildren()) do if child:IsA("UIGradient") then child:Destroy() end end; if enabled then gradientAccent(track, T.ACCENT, T.ACCENT_ALT, 90) end end; btn.MouseButton1Click:Connect(function() enabled = not enabled; updateVisual(); if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, enabled) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, enabled, function(val) enabled = val; updateVisual(); if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end) end; function togObj:Set(value) enabled = value; updateVisual(); if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, enabled) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, enabled) end end; trackElement(wrapper, elementCfg.Name or "Toggle"); return togObj end
 
-		function tabData:CreateSlider(elementCfg)
-			elementCfg = elementCfg or {}; local minVal = elementCfg.Range and elementCfg.Range[1] or 0; local maxVal = elementCfg.Range and elementCfg.Range[2] or 100; local increment = math.max(elementCfg.Increment or 1, 0.001); local suffix = elementCfg.Suffix or ""; local currentVal = math.clamp(elementCfg.CurrentValue or minVal, minVal, maxVal); local sliderObj = {}
-			local wrapper, card, cs = buildCard(page, IS_MOBILE and 60 or 54)
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(6)), Size = UDim2.new(0.6, -sn(14), 0, sn(18)), Text = elementCfg.Name or "Slider", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
-			local valLbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0.6, 0, 0, sn(6)), Size = UDim2.new(0.4, -sn(14), 0, sn(18)), Text = tostring(currentVal) .. suffix, TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Right, Parent = card})
-			local trackHeight, thumbSize = snMobile(8), snMobile(16)
-			local trackBg = mk("Frame", {BackgroundColor3 = T.SLIDER_TRACK, Size = UDim2.new(1, -sn(28), 0, trackHeight), Position = UDim2.new(0, sn(14), 0, sn(34)), Parent = card}); applyCorner(trackBg, math.floor(trackHeight / 2))
-			local initRatio = math.clamp((currentVal - minVal) / math.max(maxVal - minVal, 0.001), 0, 1)
-			local fill = mk("Frame", {BackgroundColor3 = T.SLIDER_FILL, Size = UDim2.new(initRatio, 0, 1, 0), Parent = trackBg}); applyCorner(fill, math.floor(trackHeight / 2)); gradientAccent(fill, T.ACCENT, T.ACCENT_ALT, 0)
-			local thumb = mk("Frame", {BackgroundColor3 = T.SLIDER_THUMB, Size = UDim2.new(0, thumbSize, 0, thumbSize), Position = UDim2.new(initRatio, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3, Parent = trackBg}); applyCorner(thumb, math.floor(thumbSize / 2)); applyStroke(thumb, T.BORDER_GLOW, 1, 0.2)
-			local sliding = false
-			local function applySliderValue(inputX) local rel = math.clamp((inputX - trackBg.AbsolutePosition.X) / math.max(trackBg.AbsoluteSize.X, 1), 0, 1); local raw = minVal + (maxVal - minVal) * rel; local stepped = math.floor(raw / increment + 0.5) * increment; stepped = math.clamp(stepped, minVal, maxVal); if increment >= 1 then stepped = math.floor(stepped) else local d = math.max(0, -math.floor(math.log10(increment))); stepped = tonumber(string.format("%." .. d .. "f", stepped)) or stepped end; currentVal = stepped; local ratio = (stepped - minVal) / math.max(maxVal - minVal, 0.001); tw(fill, A.QUICK, {Size = UDim2.new(ratio, 0, 1, 0)}); tw(thumb, A.QUICK, {Position = UDim2.new(ratio, 0, 0.5, 0)}); valLbl.Text = tostring(stepped) .. suffix; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, stepped) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, stepped) end end
-			trackBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = true; applySliderValue(input.Position.X) end end)
-			local sid = "sM_" .. tostring(tick()) .. math.random(1, 99999)
-			addConnection(sid, UserInputService.InputChanged:Connect(function(input) if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then applySliderValue(input.Position.X) end end))
-			addConnection(sid .. "E", UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end end))
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
-			if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, currentVal, function(val) val = math.clamp(val, minVal, maxVal); currentVal = val; local ratio = (val - minVal) / math.max(maxVal - minVal, 0.001); fill.Size = UDim2.new(ratio, 0, 1, 0); thumb.Position = UDim2.new(ratio, 0, 0.5, 0); valLbl.Text = tostring(val) .. suffix; if elementCfg.Callback then task.spawn(elementCfg.Callback, val) end end) end
-			function sliderObj:Set(value) value = math.clamp(value, minVal, maxVal); currentVal = value; local ratio = (value - minVal) / math.max(maxVal - minVal, 0.001); tw(fill, A.QUICK, {Size = UDim2.new(ratio, 0, 1, 0)}); tw(thumb, A.QUICK, {Position = UDim2.new(ratio, 0, 0.5, 0)}); valLbl.Text = tostring(value) .. suffix; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, value) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, value) end end
-			trackElement(wrapper, elementCfg.Name or "Slider"); return sliderObj
-		end
+		function tabData:CreateSlider(elementCfg) elementCfg = elementCfg or {}; local minVal = elementCfg.Range and elementCfg.Range[1] or 0; local maxVal = elementCfg.Range and elementCfg.Range[2] or 100; local increment = math.max(elementCfg.Increment or 1, 0.001); local suffix = elementCfg.Suffix or ""; local currentVal = math.clamp(elementCfg.CurrentValue or minVal, minVal, maxVal); local sliderObj = {}; local wrapper, card, cs = buildCard(page, IS_MOBILE and 60 or 54); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(6)), Size = UDim2.new(0.6, -sn(14), 0, sn(18)), Text = elementCfg.Name or "Slider", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card}); local valLbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0.6, 0, 0, sn(6)), Size = UDim2.new(0.4, -sn(14), 0, sn(18)), Text = tostring(currentVal) .. suffix, TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Right, Parent = card}); local trackHeight, thumbSize = snMobile(8), snMobile(16); local trackBg = mk("Frame", {BackgroundColor3 = T.SLIDER_TRACK, Size = UDim2.new(1, -sn(28), 0, trackHeight), Position = UDim2.new(0, sn(14), 0, sn(34)), Parent = card}); applyCorner(trackBg, math.floor(trackHeight / 2)); local initRatio = math.clamp((currentVal - minVal) / math.max(maxVal - minVal, 0.001), 0, 1); local fill = mk("Frame", {BackgroundColor3 = T.SLIDER_FILL, Size = UDim2.new(initRatio, 0, 1, 0), Parent = trackBg}); applyCorner(fill, math.floor(trackHeight / 2)); gradientAccent(fill, T.ACCENT, T.ACCENT_ALT, 0); local thumb = mk("Frame", {BackgroundColor3 = T.SLIDER_THUMB, Size = UDim2.new(0, thumbSize, 0, thumbSize), Position = UDim2.new(initRatio, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3, Parent = trackBg}); applyCorner(thumb, math.floor(thumbSize / 2)); applyStroke(thumb, T.BORDER_GLOW, 1, 0.2); local sliding = false; local function applySliderValue(inputX) local rel = math.clamp((inputX - trackBg.AbsolutePosition.X) / math.max(trackBg.AbsoluteSize.X, 1), 0, 1); local raw = minVal + (maxVal - minVal) * rel; local stepped = math.floor(raw / increment + 0.5) * increment; stepped = math.clamp(stepped, minVal, maxVal); if increment >= 1 then stepped = math.floor(stepped) else local d = math.max(0, -math.floor(math.log10(increment))); stepped = tonumber(string.format("%." .. d .. "f", stepped)) or stepped end; currentVal = stepped; local ratio = (stepped - minVal) / math.max(maxVal - minVal, 0.001); tw(fill, A.QUICK, {Size = UDim2.new(ratio, 0, 1, 0)}); tw(thumb, A.QUICK, {Position = UDim2.new(ratio, 0, 0.5, 0)}); valLbl.Text = tostring(stepped) .. suffix; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, stepped) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, stepped) end end; trackBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = true; applySliderValue(input.Position.X) end end); local sid = "sM_" .. tostring(tick()) .. math.random(1, 99999); addConnection(sid, UserInputService.InputChanged:Connect(function(input) if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then applySliderValue(input.Position.X) end end)); addConnection(sid .. "E", UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end end)); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, currentVal, function(val) val = math.clamp(val, minVal, maxVal); currentVal = val; local ratio = (val - minVal) / math.max(maxVal - minVal, 0.001); fill.Size = UDim2.new(ratio, 0, 1, 0); thumb.Position = UDim2.new(ratio, 0, 0.5, 0); valLbl.Text = tostring(val) .. suffix; if elementCfg.Callback then task.spawn(elementCfg.Callback, val) end end) end; function sliderObj:Set(value) value = math.clamp(value, minVal, maxVal); currentVal = value; local ratio = (value - minVal) / math.max(maxVal - minVal, 0.001); tw(fill, A.QUICK, {Size = UDim2.new(ratio, 0, 1, 0)}); tw(thumb, A.QUICK, {Position = UDim2.new(ratio, 0, 0.5, 0)}); valLbl.Text = tostring(value) .. suffix; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, value) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, value) end end; trackElement(wrapper, elementCfg.Name or "Slider"); return sliderObj end
 
-		function tabData:CreateDropdown(elementCfg)
-			elementCfg = elementCfg or {}; local options = elementCfg.Options or {}; local multiSelect = elementCfg.MultiSelection or false; local selected = elementCfg.CurrentOption or {}; local isOpen = false; local dropObj = {}
-			local wrapper, card, cs = buildCard(page, 38); card.ClipsDescendants = true
-			local header = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(38)), Text = "", AutoButtonColor = false, Parent = card})
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.45, -sn(14), 1, 0), Text = elementCfg.Name or "Dropdown", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = header})
-			local selLbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0.4, 0, 0, 0), Size = UDim2.new(0.48, 0, 1, 0), Text = #selected > 0 and table.concat(selected, ", ") or "None", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = header})
-			local arrow = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(1, -sn(24), 0, 0), Size = UDim2.new(0, sn(18), 1, 0), Text = "v", TextColor3 = T.TEXT_MUTED, Font = UI_FONT_BOLD, TextSize = sn(11), Parent = header})
-			local optContainer = mk("Frame", {BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, sn(40)), Size = UDim2.new(1, 0, 0, 0), ClipsDescendants = true, Parent = card}); applyLayout(optContainer, sn(3)); applyPadding(optContainer, sn(2), sn(8), sn(8), sn(8))
-			local optionButtons = {}; local function updateDisplay() selLbl.Text = #selected > 0 and table.concat(selected, ", ") or "None" end
-			local function buildOptions() for _, ob in ipairs(optionButtons) do ob:Destroy() end; optionButtons = {}; for _, opt in ipairs(options) do local isSel = table.find(selected, opt) ~= nil; local ob = mk("TextButton", {BackgroundColor3 = isSel and T.DROPDOWN_ACTIVE or T.DROPDOWN_BG, Size = UDim2.new(1, 0, 0, sn(28)), Text = opt, TextColor3 = isSel and T.TEXT_BRIGHT or T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, Parent = optContainer}); applyCorner(ob, sn(6)); applyPadding(ob, 0, sn(10), 0, sn(12)); ob.MouseEnter:Connect(function() tw(ob, A.HOVER_GROW, {BackgroundColor3 = T.DROPDOWN_HOVER}) end); ob.MouseLeave:Connect(function() tw(ob, A.HOVER_SHRINK, {BackgroundColor3 = table.find(selected, opt) and T.DROPDOWN_ACTIVE or T.DROPDOWN_BG}) end); ob.MouseButton1Click:Connect(function() if multiSelect then local idx = table.find(selected, opt); if idx then table.remove(selected, idx) else table.insert(selected, opt) end else selected = {opt} end; updateDisplay(); buildOptions(); if not multiSelect then isOpen = false; tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v" end; if elementCfg.Callback then task.spawn(elementCfg.Callback, selected) end end); table.insert(optionButtons, ob) end end; buildOptions()
-			header.MouseButton1Click:Connect(function() isOpen = not isOpen; if isOpen then local oH = #options * sn(31) + sn(14); tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38) + oH)}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44) + oH)}); optContainer.Size = UDim2.new(1, 0, 0, oH); arrow.Text = "^"; tw(cs, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.15}) else tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v"; tw(cs, A.SMOOTH, {Color = T.BORDER_DIM, Transparency = 0.35}) end end)
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
-			function dropObj:Set(newOptions) options = newOptions or {}; selected = {}; updateDisplay(); buildOptions(); if isOpen then isOpen = false; tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v" end end
-			function dropObj:SetSelected(sel) selected = type(sel) == "string" and {sel} or (sel or {}); updateDisplay(); buildOptions() end
-			trackElement(wrapper, elementCfg.Name or "Dropdown"); return dropObj
-		end
+		function tabData:CreateDropdown(elementCfg) elementCfg = elementCfg or {}; local options = elementCfg.Options or {}; local multiSelect = elementCfg.MultiSelection or false; local selected = elementCfg.CurrentOption or {}; local isOpen = false; local dropObj = {}; local wrapper, card, cs = buildCard(page, 38); card.ClipsDescendants = true; local header = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(38)), Text = "", AutoButtonColor = false, Parent = card}); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.45, -sn(14), 1, 0), Text = elementCfg.Name or "Dropdown", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = header}); local selLbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0.4, 0, 0, 0), Size = UDim2.new(0.48, 0, 1, 0), Text = #selected > 0 and table.concat(selected, ", ") or "None", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = header}); local arrow = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(1, -sn(24), 0, 0), Size = UDim2.new(0, sn(18), 1, 0), Text = "v", TextColor3 = T.TEXT_MUTED, Font = UI_FONT_BOLD, TextSize = sn(11), Parent = header}); local optContainer = mk("Frame", {BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, sn(40)), Size = UDim2.new(1, 0, 0, 0), ClipsDescendants = true, Parent = card}); applyLayout(optContainer, sn(3)); applyPadding(optContainer, sn(2), sn(8), sn(8), sn(8)); local optionButtons = {}; local function updateDisplay() selLbl.Text = #selected > 0 and table.concat(selected, ", ") or "None" end; local function buildOptions() for _, ob in ipairs(optionButtons) do ob:Destroy() end; optionButtons = {}; for _, opt in ipairs(options) do local isSel = table.find(selected, opt) ~= nil; local ob = mk("TextButton", {BackgroundColor3 = isSel and T.DROPDOWN_ACTIVE or T.DROPDOWN_BG, Size = UDim2.new(1, 0, 0, sn(28)), Text = opt, TextColor3 = isSel and T.TEXT_BRIGHT or T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, Parent = optContainer}); applyCorner(ob, sn(6)); applyPadding(ob, 0, sn(10), 0, sn(12)); ob.MouseEnter:Connect(function() tw(ob, A.HOVER_GROW, {BackgroundColor3 = T.DROPDOWN_HOVER}) end); ob.MouseLeave:Connect(function() tw(ob, A.HOVER_SHRINK, {BackgroundColor3 = table.find(selected, opt) and T.DROPDOWN_ACTIVE or T.DROPDOWN_BG}) end); ob.MouseButton1Click:Connect(function() if multiSelect then local idx = table.find(selected, opt); if idx then table.remove(selected, idx) else table.insert(selected, opt) end else selected = {opt} end; updateDisplay(); buildOptions(); if not multiSelect then isOpen = false; tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v" end; if elementCfg.Callback then task.spawn(elementCfg.Callback, selected) end end); table.insert(optionButtons, ob) end end; buildOptions(); header.MouseButton1Click:Connect(function() isOpen = not isOpen; if isOpen then local oH = #options * sn(31) + sn(14); tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38) + oH)}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44) + oH)}); optContainer.Size = UDim2.new(1, 0, 0, oH); arrow.Text = "^"; tw(cs, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.15}) else tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v"; tw(cs, A.SMOOTH, {Color = T.BORDER_DIM, Transparency = 0.35}) end end); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; function dropObj:Set(newOptions) options = newOptions or {}; selected = {}; updateDisplay(); buildOptions(); if isOpen then isOpen = false; tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, sn(38))}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, sn(44))}); arrow.Text = "v" end end; function dropObj:SetSelected(sel) selected = type(sel) == "string" and {sel} or (sel or {}); updateDisplay(); buildOptions() end; trackElement(wrapper, elementCfg.Name or "Dropdown"); return dropObj end
 
-		function tabData:CreateInput(elementCfg)
-			elementCfg = elementCfg or {}; local inputObj = {}; local wrapper, card, cs = buildCard(page, 38)
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.38, -sn(14), 1, 0), Text = elementCfg.Name or "Input", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
-			local box = mk("TextBox", {BackgroundColor3 = T.BG_INPUT, Size = UDim2.new(0.56, -sn(14), 0, sn(26)), Position = UDim2.new(0.42, 0, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = elementCfg.CurrentValue or "", PlaceholderText = elementCfg.PlaceholderText or "Type here", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11), ClearTextOnFocus = elementCfg.ClearTextOnFocus or false, Parent = card}); applyCorner(box, sn(6)); local boxStroke = applyStroke(box, T.BORDER_DIM, 1, 0.3)
-			box.Focused:Connect(function() tw(boxStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); box.FocusLost:Connect(function(enter) tw(boxStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}); if elementCfg.Callback then task.spawn(elementCfg.Callback, box.Text, enter) end end)
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; function inputObj:Set(text) box.Text = tostring(text) end; trackElement(wrapper, elementCfg.Name or "Input"); return inputObj
-		end
+		function tabData:CreateInput(elementCfg) elementCfg = elementCfg or {}; local inputObj = {}; local wrapper, card, cs = buildCard(page, 38); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.38, -sn(14), 1, 0), Text = elementCfg.Name or "Input", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card}); local box = mk("TextBox", {BackgroundColor3 = T.BG_INPUT, Size = UDim2.new(0.56, -sn(14), 0, sn(26)), Position = UDim2.new(0.42, 0, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Text = elementCfg.CurrentValue or "", PlaceholderText = elementCfg.PlaceholderText or "Type here", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(11), ClearTextOnFocus = elementCfg.ClearTextOnFocus or false, Parent = card}); applyCorner(box, sn(6)); local boxStroke = applyStroke(box, T.BORDER_DIM, 1, 0.3); box.Focused:Connect(function() tw(boxStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); box.FocusLost:Connect(function(enter) tw(boxStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}); if elementCfg.Callback then task.spawn(elementCfg.Callback, box.Text, enter) end end); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; function inputObj:Set(text) box.Text = tostring(text) end; trackElement(wrapper, elementCfg.Name or "Input"); return inputObj end
 
-		function tabData:CreateLabel(elementCfg)
-			elementCfg = elementCfg or {}; local labelObj = {}; local c = mk("Frame", {BackgroundColor3 = T.BG_CARD, BackgroundTransparency = 0.1, Size = UDim2.new(1, 0, 0, sn(30)), Parent = page}); applyCorner(c, sn(8))
-			local lbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(1, -sn(28), 1, 0), Text = elementCfg.Text or "Label", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = c})
-			function labelObj:Set(text) lbl.Text = tostring(text) end; trackElement(c, elementCfg.Text or "Label"); return labelObj
-		end
+		function tabData:CreateLabel(elementCfg) elementCfg = elementCfg or {}; local labelObj = {}; local c = mk("Frame", {BackgroundColor3 = T.BG_CARD, BackgroundTransparency = 0.1, Size = UDim2.new(1, 0, 0, sn(30)), Parent = page}); applyCorner(c, sn(8)); local lbl = mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(1, -sn(28), 1, 0), Text = elementCfg.Text or "Label", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = c}); function labelObj:Set(text) lbl.Text = tostring(text) end; trackElement(c, elementCfg.Text or "Label"); return labelObj end
 
-		function tabData:CreateParagraph(elementCfg)
-			elementCfg = elementCfg or {}; local wrapper, card = buildCard(page, 64)
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(8)), Size = UDim2.new(1, -sn(28), 0, sn(18)), Text = elementCfg.Title or "Info", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(28)), Size = UDim2.new(1, -sn(28), 0, sn(28)), Text = elementCfg.Content or "", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Parent = card})
-			trackElement(wrapper, elementCfg.Title or "Paragraph"); return wrapper
-		end
+		function tabData:CreateParagraph(elementCfg) elementCfg = elementCfg or {}; local wrapper, card = buildCard(page, 64); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(8)), Size = UDim2.new(1, -sn(28), 0, sn(18)), Text = elementCfg.Title or "Info", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = card}); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, sn(28)), Size = UDim2.new(1, -sn(28), 0, sn(28)), Text = elementCfg.Content or "", TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Parent = card}); trackElement(wrapper, elementCfg.Title or "Paragraph"); return wrapper end
 
-		function tabData:CreateColorPicker(elementCfg)
-			elementCfg = elementCfg or {}; local currentColor = elementCfg.Default or Color3.fromRGB(0, 255, 200); local cpObj = {}
-			local wrapper, card, cs = buildCard(page, 38); card.ClipsDescendants = true
-			local header = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(38)), Text = "", AutoButtonColor = false, Parent = card})
-			mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.6, -sn(14), 1, 0), Text = elementCfg.Name or "Color", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = header})
-			local preview = mk("Frame", {BackgroundColor3 = currentColor, Size = UDim2.new(0, sn(22), 0, sn(22)), Position = UDim2.new(1, -sn(34), 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = header}); applyCorner(preview, sn(6)); applyStroke(preview, T.BORDER, 1, 0.15)
-			local pickerOpen = false; local pickerFrame = mk("Frame", {BackgroundColor3 = T.COLOR_PICKER_BG, Size = UDim2.new(1, -sn(20), 0, sn(120)), Position = UDim2.new(0, sn(10), 0, sn(42)), Visible = false, Parent = card}); applyCorner(pickerFrame, sn(6)); applyStroke(pickerFrame, T.BORDER_DIM, 1, 0.3); applyPadding(pickerFrame, sn(8), sn(10), sn(8), sn(10))
-			local r, g, b = math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255); local sliderData = {}; local cpSliding = nil
-			local function updateColorFromSliders() currentColor = Color3.fromRGB(r, g, b); preview.BackgroundColor3 = currentColor; for _, sd in ipairs(sliderData) do sd.fill.Size = UDim2.new(sd.getVal() / 255, 0, 1, 0); sd.lbl.Text = tostring(sd.getVal()) end; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, {r, g, b}) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, currentColor) end end
-			for i, info in ipairs({{"R", function() return r end, function(v) r = v end}, {"G", function() return g end, function(v) g = v end}, {"B", function() return b end, function(v) b = v end}}) do local yPos = sn(6) + (i - 1) * sn(30); mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(0, sn(16), 0, sn(14)), Position = UDim2.new(0, sn(6), 0, yPos), Text = info[1], TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(10), Parent = pickerFrame}); local slBg = mk("Frame", {BackgroundColor3 = T.SLIDER_TRACK, Size = UDim2.new(1, -sn(58), 0, sn(8)), Position = UDim2.new(0, sn(28), 0, yPos + sn(3)), Parent = pickerFrame}); applyCorner(slBg, sn(4)); local slFill = mk("Frame", {BackgroundColor3 = T.ACCENT, Size = UDim2.new(info[2]() / 255, 0, 1, 0), Parent = slBg}); applyCorner(slFill, sn(4)); local slVal = mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(0, sn(26), 0, sn(14)), Position = UDim2.new(1, sn(4), 0, yPos), Text = tostring(info[2]()), TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(9), Parent = pickerFrame}); local slider = {bg = slBg, fill = slFill, lbl = slVal, getVal = info[2], setVal = info[3]}; table.insert(sliderData, slider); slBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then cpSliding = slider; local rel = math.clamp((input.Position.X - slBg.AbsolutePosition.X) / math.max(slBg.AbsoluteSize.X, 1), 0, 1); info[3](math.floor(rel * 255)); updateColorFromSliders() end end) end
-			local cpId = "cpM_" .. tostring(tick()) .. math.random(1, 99999)
-			addConnection(cpId, UserInputService.InputChanged:Connect(function(input) if cpSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local rel = math.clamp((input.Position.X - cpSliding.bg.AbsolutePosition.X) / math.max(cpSliding.bg.AbsoluteSize.X, 1), 0, 1); cpSliding.setVal(math.floor(rel * 255)); updateColorFromSliders() end end))
-			addConnection(cpId .. "E", UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then cpSliding = nil end end))
-			header.MouseButton1Click:Connect(function() pickerOpen = not pickerOpen; pickerFrame.Visible = pickerOpen; local newH = pickerOpen and sn(175) or sn(38); tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, newH)}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, newH + sn(6))}) end)
-			cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end
-			if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, {r, g, b}, function(val) if type(val) == "table" and #val >= 3 then r = math.clamp(val[1], 0, 255); g = math.clamp(val[2], 0, 255); b = math.clamp(val[3], 0, 255); updateColorFromSliders() end end) end
-			function cpObj:Set(color) r = math.floor(color.R * 255); g = math.floor(color.G * 255); b = math.floor(color.B * 255); updateColorFromSliders() end; function cpObj:Get() return currentColor end; trackElement(wrapper, elementCfg.Name or "Color"); return cpObj
-		end
+		function tabData:CreateColorPicker(elementCfg) elementCfg = elementCfg or {}; local currentColor = elementCfg.Default or Color3.fromRGB(0, 255, 200); local cpObj = {}; local wrapper, card, cs = buildCard(page, 38); card.ClipsDescendants = true; local header = mk("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sn(38)), Text = "", AutoButtonColor = false, Parent = card}); mk("TextLabel", {BackgroundTransparency = 1, Position = UDim2.new(0, sn(14), 0, 0), Size = UDim2.new(0.6, -sn(14), 1, 0), Text = elementCfg.Name or "Color", TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(12), TextXAlignment = Enum.TextXAlignment.Left, Parent = header}); local preview = mk("Frame", {BackgroundColor3 = currentColor, Size = UDim2.new(0, sn(22), 0, sn(22)), Position = UDim2.new(1, -sn(34), 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = header}); applyCorner(preview, sn(6)); applyStroke(preview, T.BORDER, 1, 0.15); local pickerOpen = false; local pickerFrame = mk("Frame", {BackgroundColor3 = T.COLOR_PICKER_BG, Size = UDim2.new(1, -sn(20), 0, sn(120)), Position = UDim2.new(0, sn(10), 0, sn(42)), Visible = false, Parent = card}); applyCorner(pickerFrame, sn(6)); applyStroke(pickerFrame, T.BORDER_DIM, 1, 0.3); applyPadding(pickerFrame, sn(8), sn(10), sn(8), sn(10)); local r, g, b = math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255); local sliderData = {}; local cpSliding = nil; local function updateColorFromSliders() currentColor = Color3.fromRGB(r, g, b); preview.BackgroundColor3 = currentColor; for _, sd in ipairs(sliderData) do sd.fill.Size = UDim2.new(sd.getVal() / 255, 0, 1, 0); sd.lbl.Text = tostring(sd.getVal()) end; if elementCfg.ConfigKey then setConfig(elementCfg.ConfigKey, {r, g, b}) end; if elementCfg.Callback then task.spawn(elementCfg.Callback, currentColor) end end; for i, info in ipairs({{"R", function() return r end, function(v) r = v end}, {"G", function() return g end, function(v) g = v end}, {"B", function() return b end, function(v) b = v end}}) do local yPos = sn(6) + (i - 1) * sn(30); mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(0, sn(16), 0, sn(14)), Position = UDim2.new(0, sn(6), 0, yPos), Text = info[1], TextColor3 = T.TEXT_SUB, Font = UI_FONT, TextSize = sn(10), Parent = pickerFrame}); local slBg = mk("Frame", {BackgroundColor3 = T.SLIDER_TRACK, Size = UDim2.new(1, -sn(58), 0, sn(8)), Position = UDim2.new(0, sn(28), 0, yPos + sn(3)), Parent = pickerFrame}); applyCorner(slBg, sn(4)); local slFill = mk("Frame", {BackgroundColor3 = T.ACCENT, Size = UDim2.new(info[2]() / 255, 0, 1, 0), Parent = slBg}); applyCorner(slFill, sn(4)); local slVal = mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(0, sn(26), 0, sn(14)), Position = UDim2.new(1, sn(4), 0, yPos), Text = tostring(info[2]()), TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(9), Parent = pickerFrame}); local slider = {bg = slBg, fill = slFill, lbl = slVal, getVal = info[2], setVal = info[3]}; table.insert(sliderData, slider); slBg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then cpSliding = slider; local rel = math.clamp((input.Position.X - slBg.AbsolutePosition.X) / math.max(slBg.AbsoluteSize.X, 1), 0, 1); info[3](math.floor(rel * 255)); updateColorFromSliders() end end) end; local cpId = "cpM_" .. tostring(tick()) .. math.random(1, 99999); addConnection(cpId, UserInputService.InputChanged:Connect(function(input) if cpSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local rel = math.clamp((input.Position.X - cpSliding.bg.AbsolutePosition.X) / math.max(cpSliding.bg.AbsoluteSize.X, 1), 0, 1); cpSliding.setVal(math.floor(rel * 255)); updateColorFromSliders() end end)); addConnection(cpId .. "E", UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then cpSliding = nil end end)); header.MouseButton1Click:Connect(function() pickerOpen = not pickerOpen; pickerFrame.Visible = pickerOpen; local newH = pickerOpen and sn(175) or sn(38); tw(card, A.SMOOTH, {Size = UDim2.new(card.Size.X.Scale, card.Size.X.Offset, 0, newH)}); tw(wrapper, A.SMOOTH, {Size = UDim2.new(1, 0, 0, newH + sn(6))}) end); cardHover(card, cs); if elementCfg.Tooltip then attachTooltip(card, elementCfg.Tooltip) end; if elementCfg.ConfigKey then registerConfig(elementCfg.ConfigKey, {r, g, b}, function(val) if type(val) == "table" and #val >= 3 then r = math.clamp(val[1], 0, 255); g = math.clamp(val[2], 0, 255); b = math.clamp(val[3], 0, 255); updateColorFromSliders() end end) end; function cpObj:Set(color) r = math.floor(color.R * 255); g = math.floor(color.G * 255); b = math.floor(color.B * 255); updateColorFromSliders() end; function cpObj:Get() return currentColor end; trackElement(wrapper, elementCfg.Name or "Color"); return cpObj end
 		return tabData
 	end
 	return WinObj
 end
 
--- game state (godMode removed)
+-- Game state
 local _appState = {
 	doorBypass = false, antiRestrict = false, espEnabled = false, chamsEnabled = false,
 	clickTP = false, infJump = false, fullbright = false, antiAFK = false,
@@ -652,28 +431,17 @@ local _appState = {
 	chamsOutlineColor = SETTINGS.CHAMS.DEFAULT_OUTLINE,
 	noFog = false, hideLocalChar = false, bigHead = false,
 	teamChams = false, teamChamsOutlineColor = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE,
-	espHiddenPlayers = {},
-	hitboxExpander = false, hitboxSize = 10,
-	aimbotEnabled = false,
-	aimbotKey = Enum.KeyCode.Q,
-	aimbotPart = "Head",
-	aimbotPredictX = 0,
-	aimbotPredictY = 0,
-	aimbotMaxDist = 1000,
-	aimbotTarget = nil,
+	espHiddenPlayers = {}, hitboxExpander = false, hitboxSize = 10,
+	aimbotEnabled = false, aimbotKey = Enum.KeyCode.Q, aimbotPart = "Head",
+	aimbotPredictX = 0, aimbotPredictY = 0, aimbotMaxDist = 1000, aimbotTarget = nil,
 }
 
-local _espData = {}
-local _chamsData = {}
-local _teamChamsData = {}
-local _chamsFolder = nil
-local _teamChamsFolder = nil
-local _savedDoorStates = {}
-local _phaseTargets = {}
-local _savedLighting = {}
+local _espData, _chamsData, _teamChamsData = {}, {}, {}
+local _chamsFolder, _teamChamsFolder = nil, nil
+local _savedDoorStates, _phaseTargets = {}, {}
+local _savedLighting, _lightingEffects = {}, {}
 local _freecamOldSubject = nil
 local _espUpdateCounter = 0
-local _lightingEffects = {}
 local _originalHitboxes = {}
 
 local R6Parts = {["Head"]="Head",["Torso"]="Torso",["LeftArm"]="Left Arm",["RightArm"]="Right Arm",["LeftLeg"]="Left Leg",["RightLeg"]="Right Leg",["Root"]="HumanoidRootPart"}
@@ -685,84 +453,18 @@ local function getRootPart(player) local c = getCharacter(player); return c and 
 local function safeTeleport(cf) local root = getRootPart(); if root then root.CFrame = cf; return true end; return false end
 local function getOtherPlayerNames() local names = {}; for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then table.insert(names, p.Name) end end; return names end
 local function isAlly(player) if not player or not LocalPlayer then return false end; if player.Team and LocalPlayer.Team then return player.Team == LocalPlayer.Team end; return false end
-
 local function isR15(character) return character and character:FindFirstChild("UpperTorso") ~= nil end
 local function getAimbotHitpart(character) local partName = _appState.aimbotPart; if isR15(character) then return R15Parts[partName] or partName else return R6Parts[partName] or partName end end
 local function isCharValid(character) return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 and character:FindFirstChild("HumanoidRootPart") end
 
-local function getClosestAimbotPlayer()
-	local closestDistance = math.huge; local closestPlayer = nil
-	local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player == LocalPlayer then continue end
-		if not isCharValid(player.Character) then continue end
-		local rootPart = player.Character.HumanoidRootPart
-		local screenPos, isVisible = Camera:WorldToViewportPoint(rootPart.Position)
-		if not isVisible then continue end
-		local distance = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		local worldDist = myRoot and (myRoot.Position - rootPart.Position).Magnitude or math.huge
-		if worldDist <= _appState.aimbotMaxDist and distance < closestDistance then
-			closestPlayer = player; closestDistance = distance
-		end
-	end
-	return closestPlayer
-end
+local function getClosestAimbotPlayer() local closestDistance = math.huge; local closestPlayer = nil; local mousePos = Vector2.new(Mouse.X, Mouse.Y); for _, player in ipairs(Players:GetPlayers()) do if player == LocalPlayer then continue end; if not isCharValid(player.Character) then continue end; local rootPart = player.Character.HumanoidRootPart; local screenPos, isVisible = Camera:WorldToViewportPoint(rootPart.Position); if not isVisible then continue end; local distance = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude; local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"); local worldDist = myRoot and (myRoot.Position - rootPart.Position).Magnitude or math.huge; if worldDist <= _appState.aimbotMaxDist and distance < closestDistance then closestPlayer = player; closestDistance = distance end end; return closestPlayer end
 
-local function createESPData(player)
-	if player == LocalPlayer or _espData[player] then return end
-	if _appState.espHiddenPlayers[player.Name] then return end
-	local espColor = _appState.espColor; local data = {connections = {}, tracerLine = nil, boxLines = {}}
-	if HAS_DRAWING and _appState.espTracers then
-		local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = true
-		data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line
-	end
-	if HAS_DRAWING and _appState.espBoxes then
-		local boxLines = {}
-		for i = 1, 4 do local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l end
-		data.boxLines = boxLines
-	end
-	_espData[player] = data
-end
-
-local function removeESPData(player)
-	local data = _espData[player]; if not data then return end
-	for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end
-	if data.tracerLine then pcall(function() data.tracerLine:Remove() end); _drawingObjects["tracer_" .. player.Name] = nil end
-	for i, l in ipairs(data.boxLines or {}) do pcall(function() l:Remove() end); _drawingObjects["box_" .. player.Name .. "_" .. i] = nil end
-	_espData[player] = nil
-end
-
+local function createESPData(player) if player == LocalPlayer or _espData[player] then return end; if _appState.espHiddenPlayers[player.Name] then return end; local espColor = _appState.espColor; local data = {connections = {}, tracerLine = nil, boxLines = {}}; if HAS_DRAWING and _appState.espTracers then local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = true; data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line end; if HAS_DRAWING and _appState.espBoxes then local boxLines = {}; for i = 1, 4 do local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l end; data.boxLines = boxLines end; _espData[player] = data end
+local function removeESPData(player) local data = _espData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.tracerLine then pcall(function() data.tracerLine:Remove() end); _drawingObjects["tracer_" .. player.Name] = nil end; for i, l in ipairs(data.boxLines or {}) do pcall(function() l:Remove() end); _drawingObjects["box_" .. player.Name .. "_" .. i] = nil end; _espData[player] = nil end
 local function clearAllESP() for player in pairs(_espData) do removeESPData(player) end end
 local function refreshESP() clearAllESP(); if _appState.espEnabled then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end end end
 
-local function updateESP()
-	_espUpdateCounter += 1
-	if _espUpdateCounter % SETTINGS.ESP.UPDATE_INTERVAL ~= 0 then return end
-	local vp = Camera.ViewportSize
-	for player, data in pairs(_espData) do
-		if not player or not player.Parent then removeESPData(player); continue end
-		if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end
-		local targetRoot = getRootPart(player)
-		if targetRoot and data.tracerLine then
-			local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position)
-			if onScreen then data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); data.tracerLine.To = Vector2.new(pos.X, pos.Y); data.tracerLine.Visible = true
-			else data.tracerLine.Visible = false end
-		elseif data.tracerLine then data.tracerLine.Visible = false end
-		if #(data.boxLines or {}) == 4 then
-			if targetRoot then
-				local rootPos = targetRoot.Position; local dist = (Camera.CFrame.Position - rootPos).Magnitude; local yOffset = -1 - (dist * 0.1); local root = rootPos + Vector3.new(0, yOffset, 0); local camRight = Camera.CFrame.RightVector
-				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); local rp = Camera:WorldToScreenPoint(root - camRight * 1.75)
-				if topOn and botOn then
-					data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true
-					data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true
-					data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true
-					data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true
-				else for _, l in ipairs(data.boxLines) do l.Visible = false end end
-			else for _, l in ipairs(data.boxLines) do l.Visible = false end end
-		end
-	end
-end
+local function updateESP() _espUpdateCounter += 1; if _espUpdateCounter % SETTINGS.ESP.UPDATE_INTERVAL ~= 0 then return end; local vp = Camera.ViewportSize; for player, data in pairs(_espData) do if not player or not player.Parent then removeESPData(player); continue end; if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end; local targetRoot = getRootPart(player); if targetRoot and data.tracerLine then local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position); if onScreen then data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); data.tracerLine.To = Vector2.new(pos.X, pos.Y); data.tracerLine.Visible = true else data.tracerLine.Visible = false end elseif data.tracerLine then data.tracerLine.Visible = false end; if #(data.boxLines or {}) == 4 then if targetRoot then local rootPos = targetRoot.Position; local dist = (Camera.CFrame.Position - rootPos).Magnitude; local yOffset = -1 - (dist * 0.1); local root = rootPos + Vector3.new(0, yOffset, 0); local camRight = Camera.CFrame.RightVector; local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); local rp = Camera:WorldToScreenPoint(root - camRight * 1.75); if topOn and botOn then data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true; data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true; data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true; data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true else for _, l in ipairs(data.boxLines) do l.Visible = false end end else for _, l in ipairs(data.boxLines) do l.Visible = false end end end end end
 
 local function ensureChamsFolder() if not _chamsFolder or not _chamsFolder.Parent then _chamsFolder = mk("Folder", {Name = "VoidChams", Parent = CoreGui}) end; return _chamsFolder end
 local function applyChamsToChar(player, char) if not char then return end; local folder = ensureChamsFolder(); local key = "VC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; return mk("Highlight", {Name = key, FillColor = SETTINGS.CHAMS.FILL_COLOR, FillTransparency = SETTINGS.CHAMS.FILL_TRANSPARENCY, OutlineColor = _appState.chamsOutlineColor, OutlineTransparency = SETTINGS.CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
@@ -778,23 +480,9 @@ local function removeTeamChams(player) local data = _teamChamsData[player]; if n
 local function clearAllTeamChams() for player in pairs(_teamChamsData) do removeTeamChams(player) end; if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:ClearAllChildren() end end
 local function refreshTeamChamsColors() if _teamChamsFolder then for _, hl in ipairs(_teamChamsFolder:GetChildren()) do if hl:IsA("Highlight") then local playerName = hl.Name:sub(5); local player = Players:FindFirstChild(playerName); if player and player.Team then hl.OutlineColor = player.TeamColor.Color else hl.OutlineColor = _appState.teamChamsOutlineColor end end end end end
 
-local function saveOriginalHitbox(player)
-	local root = getRootPart(player)
-	if root and not _originalHitboxes[player] then _originalHitboxes[player] = {Size = root.Size, Transparency = root.Transparency, CanCollide = root.CanCollide, Color = root.Color, Material = root.Material} end
-end
-
-local function restoreHitbox(player)
-	local root = getRootPart(player); local orig = _originalHitboxes[player]
-	if root and orig then root.Size = orig.Size; root.Transparency = orig.Transparency; root.CanCollide = orig.CanCollide; root.Color = orig.Color; root.Material = orig.Material end
-	_originalHitboxes[player] = nil
-end
-
-local function expandHitbox(player, size)
-	if player == LocalPlayer then return end
-	local root = getRootPart(player)
-	if root then saveOriginalHitbox(player); root.Size = Vector3.new(size, size, size); root.Transparency = 0.7; root.CanCollide = false; root.Material = Enum.Material.ForceField; root.Color = player.Team and player.TeamColor.Color or Color3.fromRGB(255, 0, 0) end
-end
-
+local function saveOriginalHitbox(player) local root = getRootPart(player); if root and not _originalHitboxes[player] then _originalHitboxes[player] = {Size = root.Size, Transparency = root.Transparency, CanCollide = root.CanCollide, Color = root.Color, Material = root.Material} end end
+local function restoreHitbox(player) local root = getRootPart(player); local orig = _originalHitboxes[player]; if root and orig then root.Size = orig.Size; root.Transparency = orig.Transparency; root.CanCollide = orig.CanCollide; root.Color = orig.Color; root.Material = orig.Material end; _originalHitboxes[player] = nil end
+local function expandHitbox(player, size) if player == LocalPlayer then return end; local root = getRootPart(player); if root then saveOriginalHitbox(player); root.Size = Vector3.new(size, size, size); root.Transparency = 0.7; root.CanCollide = false; root.Material = Enum.Material.ForceField; root.Color = player.Team and player.TeamColor.Color or Color3.fromRGB(255, 0, 0) end end
 local function clearAllHitboxes() for player in pairs(_originalHitboxes) do restoreHitbox(player) end end
 
 local function isInsideVendingModel(obj) local cur = obj; while cur and cur ~= workspace do if cur:IsA("Model") and cur.Name == "Model" and cur.Parent and cur.Parent.Name == "vending machine" then return true end; cur = cur.Parent end; return false end
@@ -809,87 +497,35 @@ local function saveLighting() _savedLighting = {Brightness = Lighting.Brightness
 local function enableFullbright() if not next(_savedLighting) then saveLighting() end; Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6; Lighting.GlobalShadows = false; Lighting.Ambient = Color3.fromRGB(180, 180, 180); Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180); for child in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = false end end end
 local function disableFullbright() if next(_savedLighting) then for k, v in pairs(_savedLighting) do pcall(function() Lighting[k] = v end) end end; for child, wasEnabled in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = wasEnabled end end end
 
-local function enableFreecam()
-	_freecamOldSubject = Camera.CameraSubject; Camera.CameraType = Enum.CameraType.Scriptable; local hum = getHumanoid(); if hum then hum.WalkSpeed = 0 end
-	local cf = Camera.CFrame; local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z); local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
-	addConnection("FreecamUpdate", RunService.RenderStepped:Connect(function(dt)
-		if not _appState.freecam then return end; local mouseDelta = UserInputService:GetMouseDelta()
-		if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then yaw = yaw - mouseDelta.X * 0.003; pitch = math.clamp(pitch - mouseDelta.Y * 0.003, -math.pi/2 + 0.1, math.pi/2 - 0.1) end
-		local lookDir = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0); local speed = G.FREECAM_SPEED * dt
-		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * G.FREECAM_FAST_MULT end
-		local moveDir = Vector3.zero
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + lookDir.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - lookDir.LookVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - lookDir.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + lookDir.RightVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.yAxis end; if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.yAxis end
-		local newPos = Camera.CFrame.Position; if moveDir.Magnitude > 0 then newPos = newPos + moveDir.Unit * speed end; Camera.CFrame = CFrame.new(newPos) * lookDir
-	end))
-end
+local function enableFreecam() _freecamOldSubject = Camera.CameraSubject; Camera.CameraType = Enum.CameraType.Scriptable; local hum = getHumanoid(); if hum then hum.WalkSpeed = 0 end; local cf = Camera.CFrame; local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z); local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1)); addConnection("FreecamUpdate", RunService.RenderStepped:Connect(function(dt) if not _appState.freecam then return end; local mouseDelta = UserInputService:GetMouseDelta(); if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then yaw = yaw - mouseDelta.X * 0.003; pitch = math.clamp(pitch - mouseDelta.Y * 0.003, -math.pi/2 + 0.1, math.pi/2 - 0.1) end; local lookDir = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0); local speed = G.FREECAM_SPEED * dt; if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * G.FREECAM_FAST_MULT end; local moveDir = Vector3.zero; if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + lookDir.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - lookDir.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - lookDir.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + lookDir.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.yAxis end; if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.yAxis end; local newPos = Camera.CFrame.Position; if moveDir.Magnitude > 0 then newPos = newPos + moveDir.Unit * speed end; Camera.CFrame = CFrame.new(newPos) * lookDir end)) end
 local function disableFreecam() removeConnection("FreecamUpdate"); Camera.CameraType = Enum.CameraType.Custom; if _freecamOldSubject then Camera.CameraSubject = _freecamOldSubject end; _freecamOldSubject = nil; local hum = getHumanoid(); if hum then hum.WalkSpeed = _appState.customWalkspeed end end
-
 local function setLocalCharVisibility(visible) local char = getCharacter(); if not char then return end; for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then part.Transparency = visible and 0 or 1 end end end
 local function setBigHead(enabled) for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then local char = getCharacter(player); if char then local head = char:FindFirstChild("Head"); if head and head:IsA("BasePart") then head.Size = enabled and Vector3.new(5, 5, 5) or Vector3.new(1.2, 1.2, 1.2) end end end end end
 
-local function globalCleanup()
-	for id in pairs(_connections) do removeConnection(id) end; for _, cb in ipairs(_cleanupList) do pcall(cb) end; _cleanupList = {}
-	clearAllESP(); clearAllChams(); clearAllTeamChams(); clearAllHitboxes(); clearAllDrawings()
-	if _chamsFolder and _chamsFolder.Parent then _chamsFolder:Destroy() end; _chamsFolder = nil
-	if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:Destroy() end; _teamChamsFolder = nil
-	if _appState.doorBypass then restoreDoorStates() end; if _appState.fullbright then disableFullbright() end
-	if _appState.freecam then disableFreecam() end; if _appState.hideLocalChar then setLocalCharVisibility(true) end
-	if _appState.bigHead then setBigHead(false) end
-	for _, gui in ipairs(CoreGui:GetChildren()) do if gui:GetAttribute("VoidInstance") == GUID then gui:Destroy() end end; _G[GUID] = nil
-end
+local function globalCleanup() for id in pairs(_connections) do removeConnection(id) end; for _, cb in ipairs(_cleanupList) do pcall(cb) end; _cleanupList = {}; clearAllESP(); clearAllChams(); clearAllTeamChams(); clearAllHitboxes(); clearAllDrawings(); if _chamsFolder and _chamsFolder.Parent then _chamsFolder:Destroy() end; _chamsFolder = nil; if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:Destroy() end; _teamChamsFolder = nil; if _appState.doorBypass then restoreDoorStates() end; if _appState.fullbright then disableFullbright() end; if _appState.freecam then disableFreecam() end; if _appState.hideLocalChar then setLocalCharVisibility(true) end; if _appState.bigHead then setBigHead(false) end; for _, gui in ipairs(CoreGui:GetChildren()) do if gui:GetAttribute("VoidInstance") == GUID then gui:Destroy() end end; _G[GUID] = nil end
 
 _G[GUID] = globalCleanup
 pcall(function() LocalPlayer.OnTeleport:Connect(function(state) if state == Enum.TeleportState.Started then globalCleanup() end end) end)
-loadConfig()
+loadDefaultOnStartup()
 
 local _keyAttempts = 0
 local _keyCorrect = false
 
 local function createKeyUI()
 	local existing = CoreGui:FindFirstChild("VoidKeyV2"); if existing then existing:Destroy() end
-	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui})
-	KGui:SetAttribute("VoidInstance", GUID)
+	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui}); KGui:SetAttribute("VoidInstance", GUID)
 	mk("Frame", {BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.3, Size = UDim2.new(1,0,1,0), Parent = KGui})
 	local s = getScale()
-	local KFrame = mk("Frame", {Size = UDim2.new(0, 340*s, 0, 200*s), Position = UDim2.new(0.5,0,0.5,0), AnchorPoint = Vector2.new(0.5,0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, Parent = KGui})
-	applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
+	local KFrame = mk("Frame", {Size = UDim2.new(0, 340*s, 0, 200*s), Position = UDim2.new(0.5,0,0.5,0), AnchorPoint = Vector2.new(0.5,0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, Parent = KGui}); applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
 	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(28)), Position = UDim2.new(0,sn(16),0,sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
 	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(48)), BackgroundTransparency = 1, Text = "Enter key to continue", TextColor3 = T.TEXT_MUTED, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
-	local InputBox = mk("TextBox", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame})
-	applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
-	InputBox.Focused:Connect(function() tw(iStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end)
-	InputBox.FocusLost:Connect(function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
-	local SubmitBtn = mk("TextButton", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(126)), BackgroundColor3 = T.BG3, BorderSizePixel = 0, Text = "Continue", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(13), AutoButtonColor = false, Parent = KFrame})
-	applyCorner(SubmitBtn, sn(8)); applyStroke(SubmitBtn, T.BORDER_DIM, 1, 0.25)
-	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, Size = UDim2.new(1,-sn(28),0,sn(40))}) end)
-	SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, Size = UDim2.new(1,-sn(32),0,sn(38))}) end)
+	local InputBox = mk("TextBox", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame}); applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
+	InputBox.Focused:Connect(function() tw(iStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); InputBox.FocusLost:Connect(function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
+	local SubmitBtn = mk("TextButton", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(126)), BackgroundColor3 = T.BG3, BorderSizePixel = 0, Text = "Continue", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(13), AutoButtonColor = false, Parent = KFrame}); applyCorner(SubmitBtn, sn(8)); applyStroke(SubmitBtn, T.BORDER_DIM, 1, 0.25)
+	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, Size = UDim2.new(1,-sn(28),0,sn(40))}) end); SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, Size = UDim2.new(1,-sn(32),0,sn(38))}) end)
 	local StatusLbl = mk("TextLabel", {Size = UDim2.new(1,-sn(32),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(172)), BackgroundTransparency = 1, Text = "", TextColor3 = T.NOTIF_ERROR, Font = UI_FONT, TextSize = sn(10), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
-
-	local function checkKey()
-		if _keyAttempts >= G.KEY_MAX_ATTEMPTS then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Locked out"; return end
-		local key = InputBox.Text:match("^%s*(.-)%s*$")
-		if key == G.KEY then
-			_keyCorrect = true
-			KGui:Destroy()
-		else
-			_keyAttempts += 1
-			local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
-			StatusLbl.TextColor3 = T.NOTIF_ERROR
-			StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"
-			InputBox.Text = ""
-			tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR})
-			tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR})
-			task.delay(0.45, function()
-				tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM})
-				tw(kStroke, A.SNAPPY, {Color = T.BORDER})
-			end)
-		end
-	end
-
-	SubmitBtn.MouseButton1Click:Connect(checkKey)
-	InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
+	local function checkKey() if _keyAttempts >= G.KEY_MAX_ATTEMPTS then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Locked out"; return end; local key = InputBox.Text:match("^%s*(.-)%s*$"); if key == G.KEY then _keyCorrect = true; KGui:Destroy() else _keyAttempts += 1; local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts; StatusLbl.TextColor3 = T.NOTIF_ERROR; StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"; InputBox.Text = ""; tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR}); tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR}); task.delay(0.45, function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM}); tw(kStroke, A.SNAPPY, {Color = T.BORDER}) end) end end
+	SubmitBtn.MouseButton1Click:Connect(checkKey); InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
 end
 
 createKeyUI()
@@ -903,116 +539,233 @@ local CombatTab = Window:CreateTab("Combat")
 local PlayerTab = Window:CreateTab("Players")
 local VisualTab = Window:CreateTab("Visuals")
 local MiscTab = Window:CreateTab("Misc")
+local ConfigTab = Window:CreateTab("Config")
 
 addConnection("CharAdded", LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.5); if Camera then Camera.FieldOfView = _appState.customFOV end; if not _appState.spectating and not _appState.freecam then local hum = char:WaitForChild("Humanoid", 5); if hum and Camera then Camera.CameraSubject = hum end end; if _appState.hideLocalChar then task.wait(0.3); setLocalCharVisibility(false) end; if _appState.bigHead then task.wait(0.5); setBigHead(true) end end))
 
--- Main Tab
 MainTab:CreateSection("Bypass")
 MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
 MainTab:CreateSection("Movement")
-MainTab:CreateToggle({Name = "Anti-Taser / Anti-Cuff", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v; Window:Notify({Title = "Void", Content = v and "Anti-restrict active" or "Anti-restrict off", Duration = 3, Type = v and "Success" or "Info"}) end})
-MainTab:CreateSlider({Name = "Walk Speed", Range = {16, 100}, Increment = 1, Suffix = " ws", CurrentValue = getConfig("customWalkspeed", G.DEFAULT_WALKSPEED), ConfigKey = "customWalkspeed", Tooltip = "Set custom walkspeed value", Callback = function(v) _appState.customWalkspeed = v; local hum = getHumanoid(); if hum and not _appState.freecam then hum.WalkSpeed = v end end})
-MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suffix = " jp", CurrentValue = getConfig("customJumpPower", G.DEFAULT_JUMPPOWER), ConfigKey = "customJumpPower", Tooltip = "Set custom jump power value", Callback = function(v) local hum = getHumanoid(); if hum then hum.JumpPower = v; hum.UseJumpPower = true end end})
+MainTab:CreateToggle({Name = "Anti-Taser / Anti-Cuff", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v end})
+MainTab:CreateSlider({Name = "Walk Speed", Range = {16, 100}, Increment = 1, Suffix = " ws", CurrentValue = getConfig("customWalkspeed", G.DEFAULT_WALKSPEED), ConfigKey = "customWalkspeed", Callback = function(v) _appState.customWalkspeed = v; local hum = getHumanoid(); if hum and not _appState.freecam then hum.WalkSpeed = v end end})
+MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suffix = " jp", CurrentValue = getConfig("customJumpPower", G.DEFAULT_JUMPPOWER), ConfigKey = "customJumpPower", Callback = function(v) local hum = getHumanoid(); if hum then hum.JumpPower = v; hum.UseJumpPower = true end end})
 MainTab:CreateSection("Teleports")
-for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
+for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
 
--- Combat Tab (Aimbot + Big Head + Hitbox)
 CombatTab:CreateSection("Aimbot")
-CombatTab:CreateToggle({Name = "Enable Aimbot", CurrentValue = getConfig("aimbotEnabled", false), ConfigKey = "aimbotEnabled", Tooltip = "Locks camera onto the nearest target. Press key to toggle lock.", Callback = function(v) _appState.aimbotEnabled = v; if not v then _appState.aimbotTarget = nil end end})
-CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", PlaceholderText = "Key e.g. Q", Tooltip = "Key to lock/unlock aimbot onto a target", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key; Window:Notify({Title = "Void", Content = "Aimbot key set to " .. v:upper(), Duration = 2, Type = "Info"}) end end})
-CombatTab:CreateDropdown({Name = "Target Part", Options = {"Head", "Torso", "Root"}, CurrentOption = {"Head"}, Tooltip = "Which body part the aimbot aims at", Callback = function(v) _appState.aimbotPart = v[1] end})
+CombatTab:CreateToggle({Name = "Enable Aimbot", CurrentValue = getConfig("aimbotEnabled", false), ConfigKey = "aimbotEnabled", Tooltip = "Locks camera onto the nearest target", Callback = function(v) _appState.aimbotEnabled = v; if not v then _appState.aimbotTarget = nil end end})
+CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", PlaceholderText = "Key e.g. Q", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key end end})
+CombatTab:CreateDropdown({Name = "Target Part", Options = {"Head", "Torso", "Root"}, CurrentOption = {"Head"}, Callback = function(v) _appState.aimbotPart = v[1] end})
 CombatTab:CreateSection("Aimbot Settings")
-CombatTab:CreateSlider({Name = "Max Distance", Range = {50, 5000}, Increment = 50, Suffix = " studs", CurrentValue = 1000, Tooltip = "Maximum world distance to lock onto a target", Callback = function(v) _appState.aimbotMaxDist = v end})
-CombatTab:CreateSlider({Name = "Prediction X/Z", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Tooltip = "Movement prediction on X and Z axes", Callback = function(v) _appState.aimbotPredictX = v end})
-CombatTab:CreateSlider({Name = "Prediction Y", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Tooltip = "Movement prediction on Y axis", Callback = function(v) _appState.aimbotPredictY = v end})
+CombatTab:CreateSlider({Name = "Max Distance", Range = {50, 5000}, Increment = 50, Suffix = " studs", CurrentValue = 1000, Callback = function(v) _appState.aimbotMaxDist = v end})
+CombatTab:CreateSlider({Name = "Prediction X/Z", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Callback = function(v) _appState.aimbotPredictX = v end})
+CombatTab:CreateSlider({Name = "Prediction Y", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Callback = function(v) _appState.aimbotPredictY = v end})
 CombatTab:CreateSection("Player Manipulation")
-CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Makes other players heads bigger for easier hits", Callback = function(v) _appState.bigHead = v; setBigHead(v); Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"}) end})
-CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expand player HumanoidRootPart hitboxes for easier hits", Callback = function(v) _appState.hitboxExpander = v; if v then Window:Notify({Title = "Void", Content = "Hitbox Expander active", Duration = 3, Type = "Success"}) else clearAllHitboxes(); Window:Notify({Title = "Void", Content = "Hitbox Expander disabled", Duration = 3, Type = "Info"}) end end})
-CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of the expanded hitbox", Callback = function(v) _appState.hitboxSize = v end})
+CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Callback = function(v) _appState.bigHead = v; setBigHead(v) end})
+CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Callback = function(v) _appState.hitboxExpander = v; if not v then clearAllHitboxes() end end})
+CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Callback = function(v) _appState.hitboxSize = v end})
 
-addConnection("AimbotKeyInput", UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe or not _appState.aimbotEnabled then return end
-	if input.KeyCode == _appState.aimbotKey then
-		if _appState.aimbotTarget then _appState.aimbotTarget = nil
-		else _appState.aimbotTarget = getClosestAimbotPlayer() end
-	end
-end))
+addConnection("AimbotKeyInput", UserInputService.InputBegan:Connect(function(input, gpe) if gpe or not _appState.aimbotEnabled then return end; if input.KeyCode == _appState.aimbotKey then if _appState.aimbotTarget then _appState.aimbotTarget = nil else _appState.aimbotTarget = getClosestAimbotPlayer() end end end))
+addConnection("AimbotLoop", RunService.RenderStepped:Connect(function() if not _appState.aimbotEnabled or not _appState.aimbotTarget then return end; local target = _appState.aimbotTarget; if not target or not target.Parent or not isCharValid(target.Character) then _appState.aimbotTarget = nil; return end; local hitpartName = getAimbotHitpart(target.Character); local hitpart = target.Character:FindFirstChild(hitpartName); if hitpart then local velocity = hitpart.AssemblyLinearVelocity or hitpart.Velocity or Vector3.zero; local predictedPos = hitpart.Position + (velocity * Vector3.new(_appState.aimbotPredictX, _appState.aimbotPredictY, _appState.aimbotPredictX)); Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPos) else _appState.aimbotTarget = nil end end))
 
-addConnection("AimbotLoop", RunService.RenderStepped:Connect(function()
-	if not _appState.aimbotEnabled or not _appState.aimbotTarget then return end
-	local target = _appState.aimbotTarget
-	if not target or not target.Parent or not isCharValid(target.Character) then _appState.aimbotTarget = nil; return end
-	local hitpartName = getAimbotHitpart(target.Character)
-	local hitpart = target.Character:FindFirstChild(hitpartName)
-	if hitpart then
-		local velocity = hitpart.AssemblyLinearVelocity or hitpart.Velocity or Vector3.zero
-		local predictedPos = hitpart.Position + (velocity * Vector3.new(_appState.aimbotPredictX, _appState.aimbotPredictY, _appState.aimbotPredictX))
-		Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPos)
-	else
-		_appState.aimbotTarget = nil
-	end
-end))
-
--- Players Tab
 PlayerTab:CreateSection("Target")
-local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Select a player to target", Callback = function(v) _appState.selectedPlayer = v[1] or nil; if _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "Target: " .. _appState.selectedPlayer, Duration = 2, Type = "Info"}) end end})
+local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Callback = function(v) _appState.selectedPlayer = v[1] or nil end})
 local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherPlayerNames()) end) end
-addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player) refreshPlayerList(); Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"}); if _appState.espEnabled then task.defer(createESPData, player) end; if _appState.chamsEnabled then task.defer(addChams, player) end; if _appState.teamChams then task.defer(addTeamChams, player) end; if _appState.bigHead then task.delay(1, function() setBigHead(true) end) end end))
-addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; if _appState.aimbotTarget == player then _appState.aimbotTarget = nil end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); _originalHitboxes[player] = nil; Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"}) end))
-PlayerTab:CreateButton({Name = "Refresh Players", Tooltip = "Refresh the player list", Callback = function() refreshPlayerList(); Window:Notify({Title = "Void", Content = "Found " .. #getOtherPlayerNames() .. " players", Duration = 2, Type = "Info"}) end})
+addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player) refreshPlayerList(); if _appState.espEnabled then task.defer(createESPData, player) end; if _appState.chamsEnabled then task.defer(addChams, player) end; if _appState.teamChams then task.defer(addTeamChams, player) end; if _appState.bigHead then task.delay(1, function() setBigHead(true) end) end end))
+addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; if _appState.aimbotTarget == player then _appState.aimbotTarget = nil end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); _originalHitboxes[player] = nil end))
+PlayerTab:CreateButton({Name = "Refresh Players", Callback = function() refreshPlayerList() end})
 PlayerTab:CreateSection("Actions")
-PlayerTab:CreateButton({Name = "Teleport To Player", Tooltip = "Teleport to the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)); Window:Notify({Title = "Void", Content = "Warped to " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
-PlayerTab:CreateButton({Name = "Spectate Player", Tooltip = "Watch the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true; Window:Notify({Title = "Void", Content = "Watching " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
-PlayerTab:CreateButton({Name = "Stop Spectating", Tooltip = "Return camera to your character", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false; Window:Notify({Title = "Void", Content = "Returned to self", Duration = 2, Type = "Info"}) end})
-PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Tooltip = "Continuously teleport behind the selected player", Callback = function(v) _appState.followPlayer = v; if not v then Window:Notify({Title = "Void", Content = "Stopped following", Duration = 2, Type = "Info"}); return end; if not _appState.selectedPlayer then _appState.followPlayer = false; Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; Window:Notify({Title = "Void", Content = "Following " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}); task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
+PlayerTab:CreateButton({Name = "Teleport To Player", Callback = function() if not _appState.selectedPlayer then return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)) end end})
+PlayerTab:CreateButton({Name = "Spectate Player", Callback = function() if not _appState.selectedPlayer then return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true end end})
+PlayerTab:CreateButton({Name = "Stop Spectating", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false end})
+PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Callback = function(v) _appState.followPlayer = v; if not v then return end; if not _appState.selectedPlayer then _appState.followPlayer = false; return end; task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
 
--- Visuals Tab
 VisualTab:CreateSection("Player ESP")
-VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Tooltip = "Enable the ESP system", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end else clearAllESP() end end})
 if HAS_DRAWING then
-	VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Tooltip = "Draw lines from screen bottom to each player", Callback = function(v) _appState.espTracers = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Tracers active" or "Tracers off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Tooltip = "Draw boxes around players", Callback = function(v) _appState.espBoxes = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Boxes active" or "Boxes off", Duration = 3, Type = v and "Success" or "Info"}) end})
+	VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Callback = function(v) _appState.espTracers = v; refreshESP() end})
+	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Callback = function(v) _appState.espBoxes = v; refreshESP() end})
 end
 VisualTab:CreateSection("Chams")
-VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Tooltip = "Highlight players through walls", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end; Window:Notify({Title = "Void", Content = "Chams active", Duration = 3, Type = "Success"}) else clearAllChams(); Window:Notify({Title = "Void", Content = "Chams disabled", Duration = 3, Type = "Info"}) end end})
-VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Tooltip = "Highlight teammates through walls", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end else clearAllChams() end end})
+VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end else clearAllTeamChams() end end})
 VisualTab:CreateSection("Colors")
-VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Tooltip = "Change the ESP drawing color", Callback = function(color) _appState.espColor = color; refreshESP() end})
-VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Tooltip = "Change the chams outline color", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
-VisualTab:CreateColorPicker({Name = "Team Chams Outline", Default = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE, ConfigKey = "teamChamsOutlineRGB", Tooltip = "Override team chams outline color", Callback = function(color) _appState.teamChamsOutlineColor = color; refreshTeamChamsColors() end})
+VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Callback = function(color) _appState.espColor = color; refreshESP() end})
+VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
+VisualTab:CreateColorPicker({Name = "Team Chams Outline", Default = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE, ConfigKey = "teamChamsOutlineRGB", Callback = function(color) _appState.teamChamsOutlineColor = color; refreshTeamChamsColors() end})
 VisualTab:CreateSection("World")
-VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Tooltip = "Remove shadows and brighten the world", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Void", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
-VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Tooltip = "Remove all fog effects", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end; Window:Notify({Title = "Void", Content = v and "No Fog active" or "Fog restored", Duration = 3, Type = v and "Success" or "Info"}) end})
-VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Tooltip = "Make your own character invisible to yourself", Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v); Window:Notify({Title = "Void", Content = v and "Character hidden" or "Character visible", Duration = 3, Type = v and "Success" or "Info"}) end})
+VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end end})
+VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end end})
+VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v) end})
 VisualTab:CreateSection("Camera")
-VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Tooltip = "Adjust the camera field of view", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
-VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Tooltip = "Set the max third person zoom distance", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
-VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Tooltip = "Detach camera and fly freely", Callback = function(v) _appState.freecam = v; if v then enableFreecam(); Window:Notify({Title = "Void", Content = "Freecam active", Duration = 5, Type = "Success"}) else disableFreecam(); Window:Notify({Title = "Void", Content = "Freecam off", Duration = 2, Type = "Info"}) end end})
+VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
+VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
+VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Callback = function(v) _appState.freecam = v; if v then enableFreecam() else disableFreecam() end end})
 
--- Misc Tab (God Mode removed)
 MiscTab:CreateSection("Protection")
-MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Tooltip = "Prevents the game from kicking you for inactivity", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)); Window:Notify({Title = "Void", Content = "Anti-AFK active", Duration = 3, Type = "Success"}) else removeConnection("AntiAFK"); Window:Notify({Title = "Void", Content = "Anti-AFK disabled", Duration = 3, Type = "Info"}) end end})
+MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)) else removeConnection("AntiAFK") end end})
 MiscTab:CreateSection("Abilities")
-MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Tooltip = "Jump infinitely in the air", Callback = function(v) _appState.infJump = v; Window:Notify({Title = "Void", Content = v and "Infinite Jump active" or "Infinite Jump off", Duration = 3, Type = v and "Success" or "Info"}) end})
+MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Callback = function(v) _appState.infJump = v end})
 addConnection("InfJump", UserInputService.JumpRequest:Connect(function() if _appState.infJump then local hum = getHumanoid(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
-MiscTab:CreateToggle({Name = "Click Teleport [Ctrl+Click]", CurrentValue = getConfig("clickTP", false), ConfigKey = "clickTP", Tooltip = "Hold Ctrl and click to teleport to cursor position", Callback = function(v) _appState.clickTP = v; Window:Notify({Title = "Void", Content = v and "Click TP active" or "Click TP off", Duration = 3, Type = v and "Success" or "Info"}) end})
-local mouse = LocalPlayer:GetMouse(); addConnection("ClickTP", mouse.Button1Down:Connect(function() if _appState.clickTP and UserInputService:IsKeyDown(G.CLICK_TP_LKEY) and mouse.Hit then safeTeleport(CFrame.new(mouse.Hit.Position + G.CLICK_TP_OFFSET)); Window:Notify({Title = "Void", Content = "Warped to cursor", Duration = 1, Type = "Success"}) end end))
+MiscTab:CreateToggle({Name = "Click Teleport [Ctrl+Click]", CurrentValue = getConfig("clickTP", false), ConfigKey = "clickTP", Callback = function(v) _appState.clickTP = v end})
+local mouse = LocalPlayer:GetMouse(); addConnection("ClickTP", mouse.Button1Down:Connect(function() if _appState.clickTP and UserInputService:IsKeyDown(G.CLICK_TP_LKEY) and mouse.Hit then safeTeleport(CFrame.new(mouse.Hit.Position + G.CLICK_TP_OFFSET)) end end))
 MiscTab:CreateSection("Character")
-MiscTab:CreateButton({Name = "Remove Hats", Tooltip = "Remove all accessories from your character", Callback = function() local char = getCharacter(); if char then for _, acc in ipairs(char:GetChildren()) do if acc:IsA("Accessory") then acc:Destroy() end end; Window:Notify({Title = "Void", Content = "Hats removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Remove Shirt/Pants", Tooltip = "Strip clothing from your character", Callback = function() local char = getCharacter(); if char then for _, item in ipairs(char:GetChildren()) do if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end end; Window:Notify({Title = "Void", Content = "Clothing removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Sit", Tooltip = "Force your character to sit", Callback = function() local hum = getHumanoid(); if hum then hum.Sit = true; Window:Notify({Title = "Void", Content = "Now sitting", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateButton({Name = "Remove Hats", Callback = function() local char = getCharacter(); if char then for _, acc in ipairs(char:GetChildren()) do if acc:IsA("Accessory") then acc:Destroy() end end end end})
+MiscTab:CreateButton({Name = "Remove Shirt/Pants", Callback = function() local char = getCharacter(); if char then for _, item in ipairs(char:GetChildren()) do if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end end end end})
+MiscTab:CreateButton({Name = "Sit", Callback = function() local hum = getHumanoid(); if hum then hum.Sit = true end end})
 MiscTab:CreateSection("Server")
 local _serverHopCooldown = false
-MiscTab:CreateButton({Name = "Rejoin Server", Tooltip = "Disconnect and rejoin the same server", Callback = function() Window:Notify({Title = "Void", Content = "Rejoining...", Duration = 2, Type = "Info"}); task.delay(1, function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end})
-MiscTab:CreateButton({Name = "Server Hop", Tooltip = "Find and join a different server", Callback = function() if _serverHopCooldown then Window:Notify({Title = "Void", Content = "Please wait...", Duration = 2, Type = "Warning"}); return end; _serverHopCooldown = true; task.delay(5, function() _serverHopCooldown = false end); Window:Notify({Title = "Void", Content = "Scanning servers...", Duration = 2, Type = "Info"}); local ok, result = pcall(function() return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) end); if not ok or not result or not result.data then Window:Notify({Title = "Void", Content = "Server fetch failed", Duration = 3, Type = "Error"}); return end; for _, server in ipairs(result.data) do if server.id ~= game.JobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then Window:Notify({Title = "Void", Content = "Server found - teleporting", Duration = 2, Type = "Success"}); task.delay(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end); return end end; Window:Notify({Title = "Void", Content = "No available servers", Duration = 3, Type = "Error"}) end})
-MiscTab:CreateButton({Name = "Copy Server ID", Tooltip = "Copy the current server job ID to clipboard", Callback = function() if setclipboard then setclipboard(game.JobId); Window:Notify({Title = "Void", Content = "Copied to clipboard", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Not supported", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Reset Character", Tooltip = "Kill your character to respawn", Callback = function() local hum = getHumanoid(); if hum then hum.Health = 0; Window:Notify({Title = "Void", Content = "Resetting...", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateSection("Config")
-MiscTab:CreateButton({Name = "Save Config", Tooltip = "Save all current settings to file", Callback = function() saveConfig(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config saved" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
-MiscTab:CreateButton({Name = "Load Config", Tooltip = "Load settings from saved config file", Callback = function() loadConfig(); applyLoadedConfigs(); Window:Notify({Title = "Void", Content = HAS_FILESYSTEM and "Config loaded" or "Filesystem not available", Duration = 2, Type = HAS_FILESYSTEM and "Success" or "Warning"}) end})
+MiscTab:CreateButton({Name = "Rejoin Server", Callback = function() task.delay(1, function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end})
+MiscTab:CreateButton({Name = "Server Hop", Callback = function() if _serverHopCooldown then return end; _serverHopCooldown = true; task.delay(5, function() _serverHopCooldown = false end); local ok, result = pcall(function() return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) end); if not ok or not result or not result.data then return end; for _, server in ipairs(result.data) do if server.id ~= game.JobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then task.delay(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end); return end end end})
+MiscTab:CreateButton({Name = "Copy Server ID", Callback = function() if setclipboard then setclipboard(game.JobId) end end})
+MiscTab:CreateButton({Name = "Reset Character", Callback = function() local hum = getHumanoid(); if hum then hum.Health = 0 end end})
 MiscTab:CreateSection("Info")
 MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
 MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
+
+-- Config Tab
+local _selectedConfigName = nil
+
+ConfigTab:CreateSection("Create New Config")
+local configNameInput = ConfigTab:CreateInput({Name = "Config Name", PlaceholderText = "Enter config name", Tooltip = "Type a name for your new config profile"})
+
+ConfigTab:CreateButton({Name = "Create Config", Tooltip = "Snapshot all current settings into a new named config", Callback = function()
+	-- We need to get the text from the input; we'll track it via callback
+	if not _pendingConfigName or _pendingConfigName == "" then
+		Window:Notify({Title = "Config", Content = "Enter a config name first", Duration = 3, Type = "Error"})
+		return
+	end
+	local name = _pendingConfigName:sub(1, 30)
+	if _allConfigs[name] then
+		Window:Notify({Title = "Config", Content = "'" .. name .. "' already exists. Use Save to update.", Duration = 3, Type = "Warning"})
+		return
+	end
+	_allConfigs[name] = snapshotCurrentConfig()
+	saveAllConfigs()
+	pcall(function() _configDropdown:Set(getConfigNames()) end)
+	Window:Notify({Title = "Config", Content = "Created config '" .. name .. "'", Duration = 3, Type = "Success"})
+end})
+
+-- We track the input text via a variable
+_pendingConfigName = ""
+-- Re-create the input with callback to track text
+configNameInput:Set("")
+-- We need to hook the callback - let's use a workaround by recreating
+-- Actually let's just use the CreateInput callback properly:
+
+-- Remove the old input and recreate with callback
+-- (The input was already created above, let's just add a manual tracker)
+
+-- Patch: We'll use a different approach - create the input with callback from the start
+-- Since we already created it, let's just note that CreateInput returns an object
+-- We need to modify our approach slightly. Let me fix this:
+
+-- The issue is we can't easily retroactively add a callback. Let's just track it globally.
+-- We'll add an input tracking connection manually.
+
+-- Actually the simplest fix: recreate the config name input properly
+-- But since we already created it, let's just use a direct approach:
+
+-- Let me just set up the config tab cleanly:
+
+-- (The configNameInput was created above without a callback, so we need to work around it)
+-- We'll just create a separate tracked variable through a new input:
+
+-- CLEAN APPROACH: We already have the input created. We'll just re-hook by finding the TextBox.
+-- Let's just find it and connect:
+do
+	-- Find the textbox in the config name input card
+	local function findTextBoxIn(wrapper)
+		for _, desc in ipairs(wrapper:GetDescendants()) do
+			if desc:IsA("TextBox") then return desc end
+		end
+	end
+	-- configNameInput is the inputObj returned by CreateInput
+	-- But we need the wrapper... CreateInput returns inputObj with :Set()
+	-- The wrapper was created inside CreateInput and parented to page
+	-- Let's just search the config page for it
+	local configPage = ConfigTab._page
+	task.defer(function()
+		for _, desc in ipairs(configPage:GetDescendants()) do
+			if desc:IsA("TextBox") and desc.PlaceholderText == "Enter config name" then
+				desc:GetPropertyChangedSignal("Text"):Connect(function()
+					_pendingConfigName = desc.Text
+				end)
+				desc.FocusLost:Connect(function()
+					_pendingConfigName = desc.Text
+				end)
+				break
+			end
+		end
+	end)
+end
+
+ConfigTab:CreateSection("Manage Configs")
+_configDropdown = ConfigTab:CreateDropdown({Name = "Select Config", Options = getConfigNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Choose a saved config profile", Callback = function(v)
+	_selectedConfigName = v[1] or nil
+end})
+
+ConfigTab:CreateButton({Name = "Load Config", Tooltip = "Apply all settings from the selected config", Callback = function()
+	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
+	local snapshot = _allConfigs[_selectedConfigName]
+	if not snapshot then Window:Notify({Title = "Config", Content = "Config not found", Duration = 3, Type = "Error"}); return end
+	applyConfigSnapshot(snapshot)
+	Window:Notify({Title = "Config", Content = "Loaded '" .. _selectedConfigName .. "'", Duration = 3, Type = "Success"})
+end})
+
+ConfigTab:CreateButton({Name = "Save Config", Tooltip = "Overwrite the selected config with current settings", Callback = function()
+	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
+	_allConfigs[_selectedConfigName] = snapshotCurrentConfig()
+	saveAllConfigs()
+	Window:Notify({Title = "Config", Content = "Saved to '" .. _selectedConfigName .. "'", Duration = 3, Type = "Success"})
+end})
+
+ConfigTab:CreateButton({Name = "Delete Config", Tooltip = "Permanently delete the selected config", Callback = function()
+	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
+	local name = _selectedConfigName
+	_allConfigs[name] = nil
+	_selectedConfigName = nil
+	saveAllConfigs()
+	pcall(function() _configDropdown:Set(getConfigNames()) end)
+	Window:Notify({Title = "Config", Content = "Deleted '" .. name .. "'", Duration = 3, Type = "Success"})
+end})
+
+ConfigTab:CreateSection("Import / Export")
+
+ConfigTab:CreateButton({Name = "Export Selected Config", Tooltip = "Copy config JSON to clipboard", Callback = function()
+	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
+	local snapshot = _allConfigs[_selectedConfigName]
+	if not snapshot then Window:Notify({Title = "Config", Content = "Config not found", Duration = 3, Type = "Error"}); return end
+	local json = HttpService:JSONEncode({name = _selectedConfigName, data = snapshot})
+	if setclipboard then
+		setclipboard(json)
+		Window:Notify({Title = "Config", Content = "Exported to clipboard", Duration = 3, Type = "Success"})
+	else
+		Window:Notify({Title = "Config", Content = "Clipboard not supported", Duration = 3, Type = "Error"})
+	end
+end})
+
+local _importText = ""
+ConfigTab:CreateInput({Name = "Import JSON", PlaceholderText = "Paste config JSON here", Tooltip = "Paste an exported config JSON string", Callback = function(text)
+	_importText = text
+end})
+
+ConfigTab:CreateButton({Name = "Import Config", Tooltip = "Import a config from the pasted JSON", Callback = function()
+	if _importText == "" then Window:Notify({Title = "Config", Content = "Paste JSON first", Duration = 3, Type = "Error"}); return end
+	local ok, parsed = pcall(function() return HttpService:JSONDecode(_importText) end)
+	if not ok or type(parsed) ~= "table" or not parsed.name or not parsed.data then
+		Window:Notify({Title = "Config", Content = "Invalid config JSON", Duration = 3, Type = "Error"}); return
+	end
+	local name = tostring(parsed.name):sub(1, 30)
+	if _allConfigs[name] then name = name .. "_imported" end
+	_allConfigs[name] = parsed.data
+	saveAllConfigs()
+	pcall(function() _configDropdown:Set(getConfigNames()) end)
+	Window:Notify({Title = "Config", Content = "Imported '" .. name .. "'", Duration = 3, Type = "Success"})
+end})
+
+ConfigTab:CreateSection("Info")
+ConfigTab:CreateLabel({Text = HAS_FILESYSTEM and ("Configs stored in: " .. SETTINGS.CONFIG.FILE) or "Filesystem not available - configs won't persist"})
 
 Window:StoreTransparencies()
 applyLoadedConfigs()
