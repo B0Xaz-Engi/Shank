@@ -1,4 +1,4 @@
-local GUID = "VOID_UI_V2"
+local GUID = "SHANK_UI_V2"
 
 if _G[GUID] then
 	pcall(_G[GUID])
@@ -8,7 +8,7 @@ end
 local CoreGui = game:GetService("CoreGui")
 
 for _, gui in ipairs(CoreGui:GetChildren()) do
-	if gui:GetAttribute("VoidInstance") == GUID then
+	if gui:GetAttribute("ShankInstance") == GUID then
 		gui:Destroy()
 	end
 end
@@ -34,9 +34,9 @@ local HAS_FILESYSTEM = pcall(function() return writefile and readfile and isfile
 
 local SETTINGS = {
 	WINDOW = {
-		NAME = "Void",
-		LOADING_TITLE = "Void",
-		LOADING_SUBTITLE = "Loading...",
+		NAME = "Shank",
+		LOADING_TITLE = "Shank",
+		LOADING_SUBTITLE = "Infiltrating...",
 		TOGGLE_KEY = Enum.KeyCode.RightShift,
 		WIDTH = 600,
 		HEIGHT = 460,
@@ -144,7 +144,7 @@ local SETTINGS = {
         {"Cafeteria", CFrame.new(920, 98, 2290)},
         {"Prison Yard", CFrame.new(779, 98, 2463)},
         {"Criminal Base", CFrame.new(-943, 95, 2058)},
-        {"Police Armory", CFrame.new(831, 98, 2284)},
+        {"Police HQ", CFrame.new(831, 98, 2284)},
         {"Parking Lot", CFrame.new(745, 98, 2148)},
         {"Roof", CFrame.new(845, 130, 2235)},
         {"Secret Room", CFrame.new(674, 98, 2384)},
@@ -154,7 +154,7 @@ local SETTINGS = {
         {"Break Room", CFrame.new(800.0896606445312, 99.98998260498047, 2266.71630859375)},
     },
 	SCALE = {PC_REF_X = 1920, PC_REF_Y = 1080, PC_MIN = 0.7, PC_MAX = 1.3, MOBILE_REF_X = 420, MOBILE_REF_Y = 700, MOBILE_MIN = 0.65, MOBILE_MAX = 1.2},
-	CONFIG = {FOLDER = "VoidUI", FILE = "VoidUI/configs.json"},
+	CONFIG = {FOLDER = "ShankUI", FILE = "ShankUI/configs.json"},
 }
 
 local T = SETTINGS.THEME
@@ -227,7 +227,6 @@ end
 
 local function playNotifSound() pcall(function() local sound = Instance.new("Sound"); sound.SoundId = SETTINGS.NOTIF.SOUND_ID; sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME; sound.PlaybackSpeed = SETTINGS.NOTIF.SOUND_PITCH_MIN + math.random() * (SETTINGS.NOTIF.SOUND_PITCH_MAX - SETTINGS.NOTIF.SOUND_PITCH_MIN); sound.Parent = SoundService; sound:Play(); sound.Ended:Once(function() sound:Destroy() end); task.delay(3, function() if sound and sound.Parent then sound:Destroy() end end) end) end
 
--- Multi-Config System
 local _allConfigs = {}
 local _configCallbacks = {}
 local _currentConfigData = {}
@@ -242,7 +241,6 @@ local function getConfig(key, default) if _currentConfigData[key] ~= nil then re
 local function snapshotCurrentConfig() local s = {}; for k, v in pairs(_currentConfigData) do s[k] = v end; return s end
 local function applyConfigSnapshot(snapshot) if type(snapshot) ~= "table" then return end; for k, v in pairs(snapshot) do _currentConfigData[k] = v end; for key, callback in pairs(_configCallbacks) do if snapshot[key] ~= nil then pcall(callback, snapshot[key]) end end end
 local function applyLoadedConfigs() for key, callback in pairs(_configCallbacks) do if _currentConfigData[key] ~= nil then pcall(callback, _currentConfigData[key]) end end end
-local function loadDefaultOnStartup() loadAllConfigs(); if _allConfigs["Default"] then applyConfigSnapshot(_allConfigs["Default"]) end end
 
 local function createTooltip(gui)
 	if _tooltipFrame and _tooltipFrame.Parent then _tooltipFrame:Destroy() end
@@ -253,18 +251,18 @@ local function showTooltip(text, absX, absY) if not _tooltipFrame or not text or
 local function hideTooltip() if _tooltipFrame then _tooltipFrame.Visible = false end end
 local function attachTooltip(element, text) if not text or text == "" then return end; element.MouseEnter:Connect(function() local pos = element.AbsolutePosition; showTooltip(text, pos.X + element.AbsoluteSize.X / 2, pos.Y) end); element.MouseLeave:Connect(hideTooltip) end
 
-local VoidUI = {}
+local ShankUI = {}
 
 local function initNotifSystem()
 	if _notifGui and _notifGui.Parent then return end
-	_notifGui = mk("ScreenGui", {Name = "VoidNotifV2", ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 999, Parent = CoreGui}); _notifGui:SetAttribute("VoidInstance", GUID)
+	_notifGui = mk("ScreenGui", {Name = "ShankNotifV2", ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 999, Parent = CoreGui}); _notifGui:SetAttribute("ShankInstance", GUID)
 	_notifHolder = mk("Frame", {BackgroundTransparency = 1, Size = UDim2.new(0, 330, 1, -20), Position = UDim2.new(1, -340, 0, 10), Parent = _notifGui}); mk("UIListLayout", {Padding = UDim.new(0, 8), FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder, Parent = _notifHolder})
 	table.insert(_cleanupList, function() if _notifGui and _notifGui.Parent then _notifGui:Destroy() end; _notifGui = nil; _notifHolder = nil end)
 end
 
 local NOTIF_COLORS = {Info = T.NOTIF_INFO, Success = T.NOTIF_SUCCESS, Error = T.NOTIF_ERROR, Warning = T.NOTIF_WARNING}
 
-function VoidUI:Notify(cfg)
+function ShankUI:Notify(cfg)
 	initNotifSystem(); if not _notifHolder then return end; if _activeNotifCount >= SETTINGS.NOTIF.MAX_ACTIVE then return end
 	cfg = cfg or {}; local title = tostring(cfg.Title or "Notice"):sub(1, 40); local content = tostring(cfg.Content or ""):sub(1, SETTINGS.NOTIF.MAX_CONTENT_LENGTH)
 	local duration = math.clamp(tonumber(cfg.Duration) or SETTINGS.NOTIF.DEFAULT_DURATION, 1, 15); local accent = NOTIF_COLORS[cfg.Type] or NOTIF_COLORS.Info
@@ -297,7 +295,7 @@ local function cardHover(card, cardStroke, opts)
 	card.MouseLeave:Connect(function() tw(card, A.HOVER_SHRINK, {BackgroundColor3 = opts.bg or T.BG_CARD, Size = origSize, Position = UDim2.new(card.Position.X.Scale, sn(2), card.Position.Y.Scale, sn(1))}); tw(cardStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.35}) end)
 end
 
-function VoidUI:CreateWindow(cfg)
+function ShankUI:CreateWindow(cfg)
 	cfg = cfg or {}
 	local winTitle = cfg.Name or SETTINGS.WINDOW.NAME; local loadTitle = cfg.LoadingTitle or SETTINGS.WINDOW.LOADING_TITLE
 	local loadSub = cfg.LoadingSubtitle or SETTINGS.WINDOW.LOADING_SUBTITLE; local toggleKey = cfg.ToggleKey or SETTINGS.WINDOW.TOGGLE_KEY
@@ -306,8 +304,8 @@ function VoidUI:CreateWindow(cfg)
 	local wH = IS_MOBILE and math.min(vp.Y * SETTINGS.WINDOW.MOBILE_HEIGHT_RATIO, SETTINGS.WINDOW.MOBILE_MAX_HEIGHT) or sn(SETTINGS.WINDOW.HEIGHT)
 	local tabW = sn(SETTINGS.WINDOW.TAB_WIDTH); local topH = sn(SETTINGS.WINDOW.TOPBAR_HEIGHT); local cr = sn(SETTINGS.WINDOW.CORNER_RADIUS)
 
-	local Gui = mk("ScreenGui", {Name = "VoidUIV2", ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true, Parent = CoreGui})
-	Gui:SetAttribute("VoidInstance", GUID); table.insert(_cleanupList, function() if Gui and Gui.Parent then Gui:Destroy() end end); createTooltip(Gui)
+	local Gui = mk("ScreenGui", {Name = "ShankUIV2", ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true, Parent = CoreGui})
+	Gui:SetAttribute("ShankInstance", GUID); table.insert(_cleanupList, function() if Gui and Gui.Parent then Gui:Destroy() end end); createTooltip(Gui)
 
 	local LoadFrame = mk("Frame", {Name = "Loading", BackgroundColor3 = T.BG1, Size = UDim2.new(0, math.floor(wW * 0.5), 0, sn(90)), Position = UDim2.new(0.5, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), ClipsDescendants = true, Parent = Gui}); applyCorner(LoadFrame, cr); applyStroke(LoadFrame, T.BORDER, 1, 0.15)
 	mk("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, -sn(24), 0, sn(22)), Position = UDim2.new(0, sn(16), 0, sn(18)), Text = loadTitle, TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(17), TextXAlignment = Enum.TextXAlignment.Left, Parent = LoadFrame})
@@ -329,18 +327,18 @@ function VoidUI:CreateWindow(cfg)
 	local function closeWindow() if not windowOpen then return end; windowOpen = false; tw(Main, A.SMOOTH, {Size = UDim2.new(0, wW * 0.95, 0, wH * 0.95), BackgroundTransparency = 1}); tw(mainStroke, A.QUICK, {Transparency = 1}); for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1}) elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1}) elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1}) end end) end; task.delay(0.3, function() if Main and Main.Parent then Main.Visible = false end end) end
 	local function openWindow() if windowOpen then return end; windowOpen = true; windowMin = false; Main.Visible = true; Main.BackgroundTransparency = 0; Main.Size = UDim2.new(0, wW * 0.93, 0, wH * 0.93); for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child.TextTransparency = child:GetAttribute("_oTT") or 0 elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child.BackgroundTransparency = child:GetAttribute("_oBT") or 0 elseif child:IsA("UIStroke") then child.Transparency = child:GetAttribute("_oST") or 0 end end) end; tw(Main, A.POP, {Size = origSize, BackgroundTransparency = 0}); tw(mainStroke, A.SNAPPY, {Transparency = 0.1}) end
 
-	CloseBtn.MouseButton1Click:Connect(function() closeWindow(); VoidUI:Notify({Title = "Void", Content = "Press " .. toggleKey.Name .. " to reopen", Duration = 3, Type = "Info"}) end)
+	CloseBtn.MouseButton1Click:Connect(function() closeWindow(); ShankUI:Notify({Title = "Shank", Content = "Press " .. toggleKey.Name .. " to reopen", Duration = 3, Type = "Info"}) end)
 	MinBtn.MouseButton1Click:Connect(function() windowMin = not windowMin; tw(Main, A.SMOOTH, {Size = windowMin and UDim2.new(0, wW, 0, topH + 2) or origSize}) end)
 	addConnection("WinToggle", UserInputService.InputBegan:Connect(function(input, gpe) if gpe then return end; if input.KeyCode == toggleKey then if windowOpen then closeWindow() else openWindow() end end end))
 
-	if IS_MOBILE then local inset = GuiService:GetGuiInset(); local mobBtn = mk("TextButton", {Name = "MobileToggle", BackgroundColor3 = T.BG2, Size = UDim2.new(0, sn(48), 0, sn(40)), Position = UDim2.new(0, sn(8), 0, sn(inset.Y + 8)), Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(11), AutoButtonColor = false, Parent = Gui}); applyCorner(mobBtn, sn(10)); applyStroke(mobBtn, T.BORDER, 1, 0.15); local mDragging, mDragStart, mDragPos = false, nil, nil; mobBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch then mDragging = true; mDragStart = input.Position; mDragPos = mobBtn.Position end end); UserInputService.InputChanged:Connect(function(input) if mDragging and input.UserInputType == Enum.UserInputType.Touch and mDragStart then local d = input.Position - mDragStart; if d.Magnitude > 10 then mobBtn.Position = UDim2.new(mDragPos.X.Scale, mDragPos.X.Offset + d.X, mDragPos.Y.Scale, mDragPos.Y.Offset + d.Y) end end end); UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch and mDragging then if mDragStart and (input.Position - mDragStart).Magnitude <= 10 then if windowOpen then closeWindow() else openWindow() end end; mDragging = false; mDragStart = nil; mDragPos = nil end end) end
+	if IS_MOBILE then local inset = GuiService:GetGuiInset(); local mobBtn = mk("TextButton", {Name = "MobileToggle", BackgroundColor3 = T.BG2, Size = UDim2.new(0, sn(48), 0, sn(40)), Position = UDim2.new(0, sn(8), 0, sn(inset.Y + 8)), Text = "Shank", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(11), AutoButtonColor = false, Parent = Gui}); applyCorner(mobBtn, sn(10)); applyStroke(mobBtn, T.BORDER, 1, 0.15); local mDragging, mDragStart, mDragPos = false, nil, nil; mobBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch then mDragging = true; mDragStart = input.Position; mDragPos = mobBtn.Position end end); UserInputService.InputChanged:Connect(function(input) if mDragging and input.UserInputType == Enum.UserInputType.Touch and mDragStart then local d = input.Position - mDragStart; if d.Magnitude > 10 then mobBtn.Position = UDim2.new(mDragPos.X.Scale, mDragPos.X.Offset + d.X, mDragPos.Y.Scale, mDragPos.Y.Offset + d.Y) end end end); UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.Touch and mDragging then if mDragStart and (input.Position - mDragStart).Magnitude <= 10 then if windowOpen then closeWindow() else openWindow() end end; mDragging = false; mDragStart = nil; mDragPos = nil end end) end
 
 	local TabStrip = mk("Frame", {Name = "TabStrip", BackgroundColor3 = T.BG2, Size = UDim2.new(0, tabW, 1, -topH - 1), Position = UDim2.new(0, 0, 0, topH + 1), BorderSizePixel = 0, Parent = Main}); mk("Frame", {BackgroundColor3 = T.BORDER_DIM, Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, 0, 0, 0), BorderSizePixel = 0, Parent = TabStrip})
 	local TabScroll = mk("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = TabStrip}); applyLayout(TabScroll, sn(6)); applyPadding(TabScroll, sn(10), sn(8), sn(10), sn(8))
 	local ContentArea = mk("Frame", {Name = "Content", BackgroundTransparency = 1, Size = UDim2.new(1, -tabW, 1, -topH - 1), Position = UDim2.new(0, tabW, 0, topH + 1), ClipsDescendants = true, Parent = Main})
 	local allTabs = {}; local allTabBtns = {}; local activeTab = nil
 	local WinObj = {}; WinObj._gui = Gui; WinObj._main = Main
-	function WinObj:Notify(notifCfg) VoidUI:Notify(notifCfg) end
+	function WinObj:Notify(notifCfg) ShankUI:Notify(notifCfg) end
 	function WinObj:StoreTransparencies() task.defer(function() for _, child in ipairs(Main:GetDescendants()) do pcall(function() if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then child:SetAttribute("_oTT", child.TextTransparency) elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then child:SetAttribute("_oBT", child.BackgroundTransparency) elseif child:IsA("UIStroke") then child:SetAttribute("_oST", child.Transparency) end end) end end) end
 
 	function WinObj:CreateTab(name)
@@ -627,7 +625,7 @@ local function updateESP()
 			if targetRoot then 
 				local rootPos = targetRoot.Position; 
 				local dist = (Camera.CFrame.Position - rootPos).Magnitude; 
-				local yOffset = -2 - (dist * 0.065); -- Improved accuracy
+				local yOffset = -2 - (dist * 0.065); 
 				local root = rootPos + Vector3.new(0, yOffset, 0); 
 				local camRight = Camera.CFrame.RightVector; 
 				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); 
@@ -649,16 +647,16 @@ local function updateESP()
 	end 
 end
 
-local function ensureChamsFolder() if not _chamsFolder or not _chamsFolder.Parent then _chamsFolder = mk("Folder", {Name = "VoidChams", Parent = CoreGui}) end; return _chamsFolder end
-local function applyChamsToChar(player, char) if not char then return end; local folder = ensureChamsFolder(); local key = "VC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; return mk("Highlight", {Name = key, FillColor = SETTINGS.CHAMS.FILL_COLOR, FillTransparency = SETTINGS.CHAMS.FILL_TRANSPARENCY, OutlineColor = _appState.chamsOutlineColor, OutlineTransparency = SETTINGS.CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
+local function ensureChamsFolder() if not _chamsFolder or not _chamsFolder.Parent then _chamsFolder = mk("Folder", {Name = "ShankChams", Parent = CoreGui}) end; return _chamsFolder end
+local function applyChamsToChar(player, char) if not char then return end; local folder = ensureChamsFolder(); local key = "SC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; return mk("Highlight", {Name = key, FillColor = SETTINGS.CHAMS.FILL_COLOR, FillTransparency = SETTINGS.CHAMS.FILL_TRANSPARENCY, OutlineColor = _appState.chamsOutlineColor, OutlineTransparency = SETTINGS.CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
 local function addChams(player) if player == LocalPlayer or _chamsData[player] then return end; local data = {connections = {}}; if player.Character then data.highlight = applyChamsToChar(player, player.Character) end; table.insert(data.connections, player.CharacterAdded:Connect(function(char) task.wait(0.2); if _appState.chamsEnabled then data.highlight = applyChamsToChar(player, char) end end)); _chamsData[player] = data end
-local function removeChams(player) local data = _chamsData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.highlight and data.highlight.Parent then data.highlight:Destroy() end; if _chamsFolder and _chamsFolder.Parent then for _, v in ipairs(_chamsFolder:GetChildren()) do if v.Name == "VC_" .. player.Name then v:Destroy() end end end; _chamsData[player] = nil end
+local function removeChams(player) local data = _chamsData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.highlight and data.highlight.Parent then data.highlight:Destroy() end; if _chamsFolder and _chamsFolder.Parent then for _, v in ipairs(_chamsFolder:GetChildren()) do if v.Name == "SC_" .. player.Name then v:Destroy() end end end; _chamsData[player] = nil end
 local function clearAllChams() for player in pairs(_chamsData) do removeChams(player) end; if _chamsFolder and _chamsFolder.Parent then _chamsFolder:ClearAllChildren() end end
 local function refreshChamsColors() if _chamsFolder then for _, hl in ipairs(_chamsFolder:GetChildren()) do if hl:IsA("Highlight") then hl.OutlineColor = _appState.chamsOutlineColor end end end end
-local function ensureTeamChamsFolder() if not _teamChamsFolder or not _teamChamsFolder.Parent then _teamChamsFolder = mk("Folder", {Name = "VoidTeamChams", Parent = CoreGui}) end; return _teamChamsFolder end
-local function applyTeamChamsToChar(player, char) if not char then return end; local folder = ensureTeamChamsFolder(); local key = "VTC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; local outlineColor = _appState.teamChamsOutlineColor; if player.Team then outlineColor = player.TeamColor.Color end; return mk("Highlight", {Name = key, FillColor = SETTINGS.TEAM_CHAMS.FILL_COLOR, FillTransparency = SETTINGS.TEAM_CHAMS.FILL_TRANSPARENCY, OutlineColor = outlineColor, OutlineTransparency = SETTINGS.TEAM_CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
+local function ensureTeamChamsFolder() if not _teamChamsFolder or not _teamChamsFolder.Parent then _teamChamsFolder = mk("Folder", {Name = "ShankTeamChams", Parent = CoreGui}) end; return _teamChamsFolder end
+local function applyTeamChamsToChar(player, char) if not char then return end; local folder = ensureTeamChamsFolder(); local key = "STC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; local outlineColor = _appState.teamChamsOutlineColor; if player.Team then outlineColor = player.TeamColor.Color end; return mk("Highlight", {Name = key, FillColor = SETTINGS.TEAM_CHAMS.FILL_COLOR, FillTransparency = SETTINGS.TEAM_CHAMS.FILL_TRANSPARENCY, OutlineColor = outlineColor, OutlineTransparency = SETTINGS.TEAM_CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
 local function addTeamChams(player) if player == LocalPlayer or _teamChamsData[player] then return end; if not isAlly(player) then return end; local data = {connections = {}}; if player.Character then data.highlight = applyTeamChamsToChar(player, player.Character) end; table.insert(data.connections, player.CharacterAdded:Connect(function(char) task.wait(0.2); if _appState.teamChams and isAlly(player) then data.highlight = applyTeamChamsToChar(player, char) end end)); _teamChamsData[player] = data end
-local function removeTeamChams(player) local data = _teamChamsData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.highlight and data.highlight.Parent then data.highlight:Destroy() end; if _teamChamsFolder and _teamChamsFolder.Parent then for _, v in ipairs(_teamChamsFolder:GetChildren()) do if v.Name == "VTC_" .. player.Name then v:Destroy() end end end; _teamChamsData[player] = nil end
+local function removeTeamChams(player) local data = _teamChamsData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.highlight and data.highlight.Parent then data.highlight:Destroy() end; if _teamChamsFolder and _teamChamsFolder.Parent then for _, v in ipairs(_teamChamsFolder:GetChildren()) do if v.Name == "STC_" .. player.Name then v:Destroy() end end end; _teamChamsData[player] = nil end
 local function clearAllTeamChams() for player in pairs(_teamChamsData) do removeTeamChams(player) end; if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:ClearAllChildren() end end
 local function refreshTeamChamsColors() if _teamChamsFolder then for _, hl in ipairs(_teamChamsFolder:GetChildren()) do if hl:IsA("Highlight") then local playerName = hl.Name:sub(5); local player = Players:FindFirstChild(playerName); if player and player.Team then hl.OutlineColor = player.TeamColor.Color else hl.OutlineColor = _appState.teamChamsOutlineColor end end end end end
 
@@ -688,7 +686,7 @@ local function globalCleanup()
 	if _appState.freecam then disableFreecam() end
 	if _appState.hideLocalChar then setLocalCharVisibility(true) end
 	if _appState.bigHead then setBigHead(false) end
-	for _, gui in ipairs(CoreGui:GetChildren()) do if gui:GetAttribute("VoidInstance") == GUID then gui:Destroy() end end
+	for _, gui in ipairs(CoreGui:GetChildren()) do if gui:GetAttribute("ShankInstance") == GUID then gui:Destroy() end end
 	_G[GUID] = nil
 	for player in pairs(_headSizeConns) do pcall(function() _headSizeConns[player]:Disconnect() end) end
 	table.clear(_headSizeConns)
@@ -700,21 +698,20 @@ local _keyAttempts = 0
 local _keyCorrect = false
 
 local function createKeyUI()
-	local existing = CoreGui:FindFirstChild("VoidKeyV2"); if existing then existing:Destroy() end
-	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui}); KGui:SetAttribute("VoidInstance", GUID)
+	local existing = CoreGui:FindFirstChild("ShankKeyV2"); if existing then existing:Destroy() end
+	local KGui = mk("ScreenGui", {Name = "ShankKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui}); KGui:SetAttribute("ShankInstance", GUID)
 	
 	local Overlay = mk("Frame", {BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.4, Size = UDim2.new(1,0,1,0), Parent = KGui})
 	
 	local s = getScale()
 	local KFrame = mk("Frame", {Size = UDim2.new(0, 340*s, 0, 200*s), Position = UDim2.new(0.5,0,0.5,0), AnchorPoint = Vector2.new(0.5,0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, Parent = KGui}); applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
 	
-	-- X Button to kill script
 	local ExitBtn = mk("TextButton", {Size = UDim2.new(0, sn(28), 0, sn(28)), Position = UDim2.new(1, -sn(34), 0, sn(8)), BackgroundTransparency = 1, Text = "×", TextColor3 = T.TEXT_MUTED, Font = UI_FONT_BOLD, TextSize = sn(22), AutoButtonColor = false, Parent = KFrame})
 	ExitBtn.MouseEnter:Connect(function() tw(ExitBtn, A.QUICK, {TextColor3 = T.NOTIF_ERROR}) end)
 	ExitBtn.MouseLeave:Connect(function() tw(ExitBtn, A.QUICK, {TextColor3 = T.TEXT_MUTED}) end)
 	ExitBtn.MouseButton1Click:Connect(globalCleanup)
 
-	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(28)), Position = UDim2.new(0,sn(16),0,sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(28)), Position = UDim2.new(0,sn(16),0,sn(20)), BackgroundTransparency = 1, Text = "Shank", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
 	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(48)), BackgroundTransparency = 1, Text = "Enter key to continue", TextColor3 = T.TEXT_MUTED, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
 	
 	local InputBox = mk("TextBox", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame}); applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
@@ -725,55 +722,26 @@ local function createKeyUI()
 	
 	local StatusLbl = mk("TextLabel", {Size = UDim2.new(1,-sn(32),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(172)), BackgroundTransparency = 1, Text = "", TextColor3 = T.NOTIF_ERROR, Font = UI_FONT, TextSize = sn(10), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
 	
-    local function checkKey() 
-        if _keyAttempts >= G.KEY_MAX_ATTEMPTS then 
-            StatusLbl.TextColor3 = T.NOTIF_WARNING
-            StatusLbl.Text = "Locked out"
-            return 
-        end
-    
-        local key = InputBox.Text:match("^%s*(.-)%s*$")
-    
-        if key == G.KEY then
-            _keyCorrect = true
-            KGui:Destroy()
-    
-            task.defer(function()
-                VoidUI:Notify({
-                    Title = "Void",
-                    Content = "Standard key accepted",
-                    Duration = 4,
-                    Type = "Success"
-                })
-            end)
-    
-        elseif key == G.ADMIN_KEY then
-            _keyCorrect = true
-            KGui:Destroy()
-    
-            task.defer(function()
-                VoidUI:Notify({
-                    Title = "Void",
-                    Content = "Admin key accepted",
-                    Duration = 5,
-                    Type = "Success"
-                })
-            end)
-    
-        else 
-            _keyAttempts += 1
-            local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
-            StatusLbl.TextColor3 = T.NOTIF_ERROR
-            StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"
-            InputBox.Text = ""
-            tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR})
-            tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR})
-            task.delay(0.45, function() 
-                tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM})
-                tw(kStroke, A.SNAPPY, {Color = T.BORDER}) 
-            end)
-        end
-    end
+	local function checkKey() 
+		if _keyAttempts >= G.KEY_MAX_ATTEMPTS then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Locked out"; return end
+		local key = InputBox.Text:match("^%s*(.-)%s*$")
+		
+		if key == G.KEY then
+			_keyCorrect = true
+			KGui:Destroy()
+			task.defer(function() ShankUI:Notify({Title = "Shank", Content = "Standard key accepted", Duration = 4, Type = "Success"}) end)
+		elseif key == G.ADMIN_KEY then
+			_keyCorrect = true
+			KGui:Destroy()
+			task.defer(function() ShankUI:Notify({Title = "Shank", Content = "Admin key accepted", Duration = 5, Type = "Success"}) end)
+		else 
+			_keyAttempts += 1
+			local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
+			StatusLbl.TextColor3 = T.NOTIF_ERROR; StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"
+			InputBox.Text = ""; tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR}); tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR})
+			task.delay(0.45, function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM}); tw(kStroke, A.SNAPPY, {Color = T.BORDER}) end)
+		end 
+	end
 	
 	SubmitBtn.MouseButton1Click:Connect(checkKey)
 	InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
@@ -784,7 +752,7 @@ repeat task.wait(0.1) until _keyCorrect
 
 local mainOk, mainErr = pcall(function()
 
-local Window = VoidUI:CreateWindow({Name = SETTINGS.WINDOW.NAME, LoadingTitle = SETTINGS.WINDOW.LOADING_TITLE, LoadingSubtitle = SETTINGS.WINDOW.LOADING_SUBTITLE, ToggleKey = SETTINGS.WINDOW.TOGGLE_KEY})
+local Window = ShankUI:CreateWindow({Name = SETTINGS.WINDOW.NAME, LoadingTitle = SETTINGS.WINDOW.LOADING_TITLE, LoadingSubtitle = SETTINGS.WINDOW.LOADING_SUBTITLE, ToggleKey = SETTINGS.WINDOW.TOGGLE_KEY})
 local MainTab = Window:CreateTab("Main")
 local CombatTab = Window:CreateTab("Combat")
 local PlayerTab = Window:CreateTab("Players")
@@ -804,7 +772,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 MainTab:CreateSection("Bypass")
-MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
+MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Shank", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Shank", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
 
 MainTab:CreateSection("Movement")
 MainTab:CreateToggle({Name = "Anti-Taser", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v end})
@@ -814,11 +782,7 @@ MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suf
 MainTab:CreateSection("Teleports")
 for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do 
 	MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() 
-		if safeTeleport(loc[2]) then 
-			Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) 
-		else 
-			Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) 
-		end 
+		if safeTeleport(loc[2]) then ShankUI:Notify({Title = "Shank", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else ShankUI:Notify({Title = "Shank", Content = "No character found", Duration = 2, Type = "Error"}) end 
 	end}) 
 end
 
@@ -828,212 +792,99 @@ MainTab:CreateLabel({Text = "⚠️ Risky - May Be Kicked Or Banned"})
 local function gunTeleport(gunName, x, y, z)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then
-        Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"})
-        return
-    end
+    if not root then return end
     local originalPos = root.CFrame
     root.CFrame = CFrame.new(x, y, z)
-    Window:Notify({Title = "Void", Content = "Grabbing " .. gunName .. "...", Duration = 1.5, Type = "Info"})
+    Window:Notify({Title = "Shank", Content = "Grabbing " .. gunName .. "...", Duration = 1.5, Type = "Info"})
     task.wait(1.3)
-    if root and root.Parent then
-        root.CFrame = originalPos
-        Window:Notify({Title = "Void", Content = gunName .. " acquired!", Duration = 2, Type = "Success"})
-    end
+    if root and root.Parent then root.CFrame = originalPos end
 end
 
-MainTab:CreateButton({Name = "Grab MP5", Tooltip = "Teleports to MP5, grabs it, and returns you", Callback = function() gunTeleport("MP5", 813.72, 100.74, 2229.37) end})
-MainTab:CreateButton({Name = "Grab Remington 870", Tooltip = "Teleports to Remington 870, grabs it, and returns you", Callback = function() gunTeleport("Remington 870", 820.27, 100.74, 2229.31) end})
-MainTab:CreateButton({Name = "Grab AK-47", Tooltip = "Teleports to AK-47, grabs it, and returns you", Callback = function() gunTeleport("AK-47", -932, 100.74, 2039.5) end})
+MainTab:CreateButton({Name = "Grab MP5", Callback = function() gunTeleport("MP5", 813.72, 100.74, 2229.37) end})
+MainTab:CreateButton({Name = "Grab Remington 870", Callback = function() gunTeleport("Remington 870", 820.27, 100.74, 2229.31) end})
+MainTab:CreateButton({Name = "Grab AK-47", Callback = function() gunTeleport("AK-47", -932, 94.5, 2039.5) end})
+
 CombatTab:CreateSection("Aimbot")
 CombatTab:CreateToggle({Name = "Enable Aimbot", CurrentValue = getConfig("aimbotEnabled", false), ConfigKey = "aimbotEnabled", Callback = function(v) _appState.aimbotEnabled = v; if not v then _appState.aimbotTarget = nil end end})
-CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", PlaceholderText = "Key e.g. Q", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key end end})
+CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key end end})
 CombatTab:CreateDropdown({Name = "Target Part", Options = {"Head", "Torso", "Root"}, CurrentOption = {"Head"}, Callback = function(v) _appState.aimbotPart = v[1] end})
-CombatTab:CreateSection("Aimbot Settings")
-CombatTab:CreateSlider({Name = "Max Distance", Range = {50, 5000}, Increment = 50, Suffix = " studs", CurrentValue = 1000, Callback = function(v) _appState.aimbotMaxDist = v end})
-CombatTab:CreateSlider({Name = "Prediction X/Z", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Callback = function(v) _appState.aimbotPredictX = v end})
-CombatTab:CreateSlider({Name = "Prediction Y", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Callback = function(v) _appState.aimbotPredictY = v end})
+CombatTab:CreateSlider({Name = "Max Distance", Range = {50, 5000}, Increment = 50, CurrentValue = 1000, Callback = function(v) _appState.aimbotMaxDist = v end})
 CombatTab:CreateSection("Player Manipulation")
-CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Enlarges all players heads. Applies on join and every respawn.", Callback = function(v)
+CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Callback = function(v)
 	_appState.bigHead = v
 	setBigHead(v)
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then setupPlayerHooks(player) end
-	end
-	Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"})
+	for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then setupPlayerHooks(player) end end
+	Window:Notify({Title = "Shank", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"})
 end})
 CombatTab:CreateSlider({Name = "Big Head Size", Range = {1.5, 6}, Increment = 0.1, Suffix = "x", CurrentValue = getConfig("bigHeadSize", 2.8), ConfigKey = "bigHeadSize", Callback = function(v)
 	_appState.bigHeadSize = v
-	if _appState.bigHead then
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= LocalPlayer and plr.Character then applyBigHeadToChar(plr.Character, true) end
-		end
-	end
+	if _appState.bigHead then for _, plr in ipairs(Players:GetPlayers()) do if plr ~= LocalPlayer and plr.Character then applyBigHeadToChar(plr.Character, true) end end end
 end})
-CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expands hitboxes on spawn. Auto-skips players in vehicles.", Callback = function(v)
+CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Callback = function(v)
 	_appState.hitboxExpander = v
 	if not v then clearAllHitboxes() else
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end
-		end
+		for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end end
 	end
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then setupPlayerHooks(player) end
-	end
-	Window:Notify({Title = "Void", Content = v and "Hitbox Expander active" or "Hitbox Expander off", Duration = 3, Type = v and "Success" or "Info"})
+	for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then setupPlayerHooks(player) end end
+	Window:Notify({Title = "Shank", Content = v and "Hitbox Expander active" or "Hitbox Expander off", Duration = 3, Type = v and "Success" or "Info"})
 end})
-CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of expanded hitboxes.", Callback = function(v)
+CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Callback = function(v)
 	_appState.hitboxSize = v
 	if _appState.hitboxExpander then
 		clearAllHitboxes()
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end
-		end
+		for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end end
 	end
 end})
 
-addConnection("AimbotKeyInput", UserInputService.InputBegan:Connect(function(input, gpe) if gpe or not _appState.aimbotEnabled then return end; if input.KeyCode == _appState.aimbotKey then if _appState.aimbotTarget then _appState.aimbotTarget = nil else _appState.aimbotTarget = getClosestAimbotPlayer() end end end))
-addConnection("AimbotLoop", RunService.RenderStepped:Connect(function() if not _appState.aimbotEnabled or not _appState.aimbotTarget then return end; local target = _appState.aimbotTarget; if not target or not target.Parent or not isCharValid(target.Character) then _appState.aimbotTarget = nil; return end; local hitpartName = getAimbotHitpart(target.Character); local hitpart = target.Character:FindFirstChild(hitpartName); if hitpart then local velocity = hitpart.AssemblyLinearVelocity or hitpart.Velocity or Vector3.zero; local predictedPos = hitpart.Position + (velocity * Vector3.new(_appState.aimbotPredictX, _appState.aimbotPredictY, _appState.aimbotPredictX)); Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPos) else _appState.aimbotTarget = nil end end))
-
 PlayerTab:CreateSection("Target")
-local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Select a player to target", Callback = function(v) _appState.selectedPlayer = v[1] or nil; if _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "Target: " .. _appState.selectedPlayer, Duration = 2, Type = "Info"}) end end})
+local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Callback = function(v) _appState.selectedPlayer = v[1] or nil end})
 local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherPlayerNames()) end) end
 
-addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player)
-	refreshPlayerList()
-	Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"})
-	setupPlayerHooks(player)
-	if _appState.espEnabled then task.defer(createESPData, player) end
-	if _appState.chamsEnabled then task.defer(addChams, player) end
-	if _appState.teamChams then task.defer(addTeamChams, player) end
-end))
-
-addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player)
-	if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end
-	if _appState.aimbotTarget == player then _appState.aimbotTarget = nil end
-	refreshPlayerList()
-	removeESPData(player); removeChams(player); removeTeamChams(player)
-	teardownPlayerHooks(player)
-	Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"})
-end))
-
-PlayerTab:CreateButton({Name = "Refresh Players", Tooltip = "Refresh the player list", Callback = function() refreshPlayerList(); Window:Notify({Title = "Void", Content = "Found " .. #getOtherPlayerNames() .. " players", Duration = 2, Type = "Info"}) end})
+PlayerTab:CreateButton({Name = "Refresh Players", Callback = function() refreshPlayerList() end})
 PlayerTab:CreateSection("Actions")
-PlayerTab:CreateButton({Name = "Teleport To Player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)); Window:Notify({Title = "Void", Content = "Warped to " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
-PlayerTab:CreateButton({Name = "Spectate Player", Callback = function() if not _appState.selectedPlayer then return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true; Window:Notify({Title = "Void", Content = "Watching " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) end end})
-PlayerTab:CreateButton({Name = "Stop Spectating", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false; Window:Notify({Title = "Void", Content = "Returned to self", Duration = 2, Type = "Info"}) end})
-PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Callback = function(v) _appState.followPlayer = v; if not v then Window:Notify({Title = "Void", Content = "Stopped following", Duration = 2, Type = "Info"}); return end; if not _appState.selectedPlayer then _appState.followPlayer = false; return end; Window:Notify({Title = "Void", Content = "Following " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}); task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
+PlayerTab:CreateButton({Name = "Teleport To Player", Callback = function() 
+    if not _appState.selectedPlayer then return end
+    local target = Players:FindFirstChild(_appState.selectedPlayer)
+    local root = target and getRootPart(target)
+    if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)) end
+end})
 
 VisualTab:CreateSection("Player ESP")
-VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end else clearAllESP() end end})
 if HAS_DRAWING then
 	VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Callback = function(v) _appState.espTracers = v; refreshESP() end})
 	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Callback = function(v) _appState.espBoxes = v; refreshESP() end})
 end
-VisualTab:CreateSection("Chams")
-VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end; Window:Notify({Title = "Void", Content = "Chams active", Duration = 3, Type = "Success"}) else clearAllChams(); Window:Notify({Title = "Void", Content = "Chams disabled", Duration = 3, Type = "Info"}) end end})
-VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end else clearAllChams() end end})
+VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end else clearAllTeamChams() end end})
 VisualTab:CreateSection("Colors")
 VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Callback = function(color) _appState.espColor = color; refreshESP() end})
 VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
-VisualTab:CreateSection("World")
-VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Void", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
-VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end end})
-VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v) end})
+
 VisualTab:CreateSection("Camera")
-VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
-VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
-VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Callback = function(v) _appState.freecam = v; if v then enableFreecam(); Window:Notify({Title = "Void", Content = "Freecam active", Duration = 5, Type = "Success"}) else disableFreecam(); Window:Notify({Title = "Void", Content = "Freecam off", Duration = 2, Type = "Info"}) end end})
+VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
+VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Callback = function(v) _appState.freecam = v; if v then enableFreecam() else disableFreecam() end end})
 
 MiscTab:CreateSection("Protection")
-MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)); Window:Notify({Title = "Void", Content = "Anti-AFK active", Duration = 3, Type = "Success"}) else removeConnection("AntiAFK"); Window:Notify({Title = "Void", Content = "Anti-AFK disabled", Duration = 3, Type = "Info"}) end end})
-MiscTab:CreateSection("Abilities")
-MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Callback = function(v) _appState.infJump = v; Window:Notify({Title = "Void", Content = v and "Infinite Jump active" or "Infinite Jump off", Duration = 3, Type = v and "Success" or "Info"}) end})
-addConnection("InfJump", UserInputService.JumpRequest:Connect(function() if _appState.infJump then local hum = getHumanoid(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
+MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)) else removeConnection("AntiAFK") end end})
+MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Callback = function(v) _appState.infJump = v end})
 MiscTab:CreateToggle({Name = "Click Teleport [Ctrl+Click]", CurrentValue = getConfig("clickTP", false), ConfigKey = "clickTP", Callback = function(v) _appState.clickTP = v end})
-local mouse = LocalPlayer:GetMouse(); addConnection("ClickTP", mouse.Button1Down:Connect(function() if _appState.clickTP and UserInputService:IsKeyDown(G.CLICK_TP_LKEY) and mouse.Hit then safeTeleport(CFrame.new(mouse.Hit.Position + G.CLICK_TP_OFFSET)); Window:Notify({Title = "Void", Content = "Warped to cursor", Duration = 1, Type = "Success"}) end end))
-MiscTab:CreateSection("Character")
-MiscTab:CreateButton({Name = "Remove Hats", Callback = function() local char = getCharacter(); if char then for _, acc in ipairs(char:GetChildren()) do if acc:IsA("Accessory") then acc:Destroy() end end; Window:Notify({Title = "Void", Content = "Hats removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Remove Shirt/Pants", Callback = function() local char = getCharacter(); if char then for _, item in ipairs(char:GetChildren()) do if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then item:Destroy() end end; Window:Notify({Title = "Void", Content = "Clothing removed", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Sit", Callback = function() local hum = getHumanoid(); if hum then hum.Sit = true; Window:Notify({Title = "Void", Content = "Now sitting", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateSection("Server")
-local _serverHopCooldown = false
-MiscTab:CreateButton({Name = "Rejoin Server", Callback = function() Window:Notify({Title = "Void", Content = "Rejoining...", Duration = 2, Type = "Info"}); task.delay(1, function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end})
-MiscTab:CreateButton({Name = "Server Hop", Callback = function() if _serverHopCooldown then Window:Notify({Title = "Void", Content = "Please wait...", Duration = 2, Type = "Warning"}); return end; _serverHopCooldown = true; task.delay(5, function() _serverHopCooldown = false end); local ok, result = pcall(function() return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) end); if not ok or not result or not result.data then Window:Notify({Title = "Void", Content = "Server fetch failed", Duration = 3, Type = "Error"}); return end; for _, server in ipairs(result.data) do if server.id ~= game.JobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then Window:Notify({Title = "Void", Content = "Server found - teleporting", Duration = 2, Type = "Success"}); task.delay(1, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end); return end end; Window:Notify({Title = "Void", Content = "No available servers", Duration = 3, Type = "Error"}) end})
-MiscTab:CreateButton({Name = "Copy Server ID", Callback = function() if setclipboard then setclipboard(game.JobId); Window:Notify({Title = "Void", Content = "Copied to clipboard", Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Not supported", Duration = 2, Type = "Error"}) end end})
-MiscTab:CreateButton({Name = "Reset Character", Callback = function() local hum = getHumanoid(); if hum then hum.Health = 0; Window:Notify({Title = "Void", Content = "Resetting...", Duration = 1, Type = "Info"}) else Window:Notify({Title = "Void", Content = "No character", Duration = 2, Type = "Error"}) end end})
+MiscTab:CreateButton({Name = "Rejoin Server", Callback = function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end})
 MiscTab:CreateSection("Info")
-MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
-MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
+MiscTab:CreateLabel({Text = "Shank v2 | by B0Xaz"})
 
-local _selectedConfigName = nil
-local _pendingConfigName = ""
-local _configDropdown = nil
-local _importText = ""
-
-ConfigTab:CreateSection("Create New Config")
-ConfigTab:CreateInput({Name = "Config Name", PlaceholderText = "Enter config name", Tooltip = "Name for your new config profile", OnChanged = function(text) _pendingConfigName = text end, Callback = function(text) _pendingConfigName = text end})
-ConfigTab:CreateButton({Name = "Create Config", Tooltip = "Snapshot all current settings into a new named config", Callback = function()
-	local name = (_pendingConfigName or ""):match("^%s*(.-)%s*$")
-	if name == "" then Window:Notify({Title = "Config", Content = "Enter a name first", Duration = 3, Type = "Error"}); return end
-	name = name:sub(1, 30)
-	if _allConfigs[name] then Window:Notify({Title = "Config", Content = "'" .. name .. "' already exists. Use Save to update.", Duration = 3, Type = "Warning"}); return end
-	_allConfigs[name] = snapshotCurrentConfig()
-	saveAllConfigs()
-	if _configDropdown then pcall(function() _configDropdown:Set(getConfigNames()) end) end
-	Window:Notify({Title = "Config", Content = "Created '" .. name .. "'", Duration = 3, Type = "Success"})
-end})
 ConfigTab:CreateSection("Manage Configs")
-_configDropdown = ConfigTab:CreateDropdown({Name = "Select Config", Options = getConfigNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Choose a saved config", Callback = function(v) _selectedConfigName = v[1] or nil end})
-ConfigTab:CreateButton({Name = "Load Config", Tooltip = "Apply all settings from the selected config", Callback = function()
-	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
-	local snapshot = _allConfigs[_selectedConfigName]
-	if not snapshot then Window:Notify({Title = "Config", Content = "Config not found", Duration = 3, Type = "Error"}); return end
-	applyConfigSnapshot(snapshot)
-	Window:Notify({Title = "Config", Content = "Loaded '" .. _selectedConfigName .. "'", Duration = 3, Type = "Success"})
-end})
-ConfigTab:CreateButton({Name = "Save Config", Tooltip = "Overwrite selected config with current settings", Callback = function()
-	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
-	_allConfigs[_selectedConfigName] = snapshotCurrentConfig()
-	saveAllConfigs()
-	Window:Notify({Title = "Config", Content = "Saved to '" .. _selectedConfigName .. "'", Duration = 3, Type = "Success"})
-end})
-ConfigTab:CreateButton({Name = "Delete Config", Tooltip = "Permanently delete the selected config", Callback = function()
-	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
-	local name = _selectedConfigName; _allConfigs[name] = nil; _selectedConfigName = nil
-	saveAllConfigs()
-	if _configDropdown then pcall(function() _configDropdown:Set(getConfigNames()) end) end
-	Window:Notify({Title = "Config", Content = "Deleted '" .. name .. "'", Duration = 3, Type = "Success"})
-end})
-ConfigTab:CreateSection("Import / Export")
-ConfigTab:CreateButton({Name = "Export Selected Config", Tooltip = "Copy selected config as JSON to clipboard", Callback = function()
-	if not _selectedConfigName then Window:Notify({Title = "Config", Content = "No config selected", Duration = 3, Type = "Error"}); return end
-	local snapshot = _allConfigs[_selectedConfigName]
-	if not snapshot then Window:Notify({Title = "Config", Content = "Config not found", Duration = 3, Type = "Error"}); return end
-	local ok, json = pcall(function() return HttpService:JSONEncode({name = _selectedConfigName, data = snapshot}) end)
-	if ok and setclipboard then setclipboard(json); Window:Notify({Title = "Config", Content = "Exported to clipboard", Duration = 3, Type = "Success"})
-	else Window:Notify({Title = "Config", Content = "Export failed or clipboard unavailable", Duration = 3, Type = "Error"}) end
-end})
-ConfigTab:CreateInput({Name = "Import JSON", PlaceholderText = "Paste exported config JSON here", Tooltip = "Paste an exported config JSON string", OnChanged = function(text) _importText = text end, Callback = function(text) _importText = text end})
-ConfigTab:CreateButton({Name = "Import Config", Tooltip = "Import a config from the pasted JSON", Callback = function()
-	if not _importText or _importText == "" then Window:Notify({Title = "Config", Content = "Paste JSON first", Duration = 3, Type = "Error"}); return end
-	local ok, parsed = pcall(function() return HttpService:JSONDecode(_importText) end)
-	if not ok or type(parsed) ~= "table" or not parsed.name or not parsed.data then Window:Notify({Title = "Config", Content = "Invalid config JSON", Duration = 3, Type = "Error"}); return end
-	local name = tostring(parsed.name):sub(1, 30)
-	if _allConfigs[name] then name = name .. "_import" end
-	_allConfigs[name] = parsed.data; saveAllConfigs()
-	if _configDropdown then pcall(function() _configDropdown:Set(getConfigNames()) end) end
-	Window:Notify({Title = "Config", Content = "Imported '" .. name .. "'", Duration = 3, Type = "Success"})
-end})
-ConfigTab:CreateSection("Info")
-ConfigTab:CreateLabel({Text = HAS_FILESYSTEM and ("File: " .. SETTINGS.CONFIG.FILE) or "No filesystem - configs won't persist"})
+_configDropdown = ConfigTab:CreateDropdown({Name = "Select Config", Options = getConfigNames(), CurrentOption = {}, MultiSelection = false, Callback = function(v) _selectedConfigName = v[1] or nil end})
+ConfigTab:CreateButton({Name = "Save Config", Callback = function() if _selectedConfigName then _allConfigs[_selectedConfigName] = snapshotCurrentConfig(); saveAllConfigs() end end})
+ConfigTab:CreateButton({Name = "Load Config", Callback = function() if _selectedConfigName then applyConfigSnapshot(_allConfigs[_selectedConfigName]) end end})
 
 Window:StoreTransparencies()
 
--- Suppress notifications during config load
 local _suppressNotifs = true
 local _originalNotify = Window.Notify
 Window.Notify = function() end
+loadAllConfigs()
+if _allConfigs["Default"] then applyConfigSnapshot(_allConfigs["Default"]) end
 applyLoadedConfigs()
 task.delay(1, function()
     _suppressNotifs = false
@@ -1045,28 +896,17 @@ addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	local humanoid = getHumanoid()
 	if humanoid then
 		if not _appState.freecam then
-			if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then 
-				if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end
-			elseif _appState.antiRestrict then 
-				if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end 
-			end
+			if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end
+			elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end
 		end
-		if _appState.antiRestrict and humanoid.JumpPower < G.DEFAULT_JUMPPOWER then humanoid.JumpPower = G.DEFAULT_JUMPPOWER end
 	end
 	if _appState.antiRestrict then 
-		local pGui = LocalPlayer:FindFirstChild("PlayerGui"); 
-		if pGui then 
-			for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do 
-				local gui = pGui:FindFirstChild(guiName); 
-				if gui and gui.Enabled then gui.Enabled = false end 
-			end 
-		end 
+		local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+		if pGui then for _, name in ipairs({"Taser", "Flashbang", "Cuffs"}) do local g = pGui:FindFirstChild(name) if g and g.Enabled then g.Enabled = false end end end 
 	end
 	if _appState.doorBypass then processDoors() end
 	if _appState.espEnabled then updateESP() end
 	if _appState.fullbright then enableFullbright() end
-	if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
-	
 	if _appState.hitboxExpander then
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= LocalPlayer and plr.Character then
@@ -1076,9 +916,7 @@ addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 					if hum.Sit or (hum.SeatPart ~= nil) then
 						if _originalHitboxes[plr] then restoreHitbox(plr) end
 					else
-						if not _originalHitboxes[plr] then
-							applyHitboxToChar(plr, plr.Character)
-						end
+						if not _originalHitboxes[plr] then applyHitboxToChar(plr, plr.Character) end
 					end
 				end
 			end
@@ -1086,7 +924,7 @@ addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	end
 end))
 
-Window:Notify({Title = "Void", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
+Window:Notify({Title = "Shank", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
 end)
 
-if not mainOk then VoidUI:Notify({Title = "Void", Content = "Init failed: " .. tostring(mainErr):sub(1, 80), Duration = 10, Type = "Error"}) end
+if not mainOk then ShankUI:Notify({Title = "Shank", Content = "Init failed: " .. tostring(mainErr):sub(1, 80), Duration = 10, Type = "Error"}) end
