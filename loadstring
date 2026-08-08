@@ -26,6 +26,7 @@ local SoundService = game:GetService("SoundService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 local IS_MOBILE = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 local HAS_DRAWING = pcall(function() return Drawing and Drawing.new end)
@@ -197,9 +198,7 @@ local _tooltipFrame = nil
 local _tooltipLabel = nil
 
 local function addConnection(id, conn)
-	if _connections[id] then
-		pcall(function() _connections[id]:Disconnect() end)
-	end
+	if _connections[id] then pcall(function() _connections[id]:Disconnect() end) end
 	_connections[id] = conn
 end
 
@@ -211,9 +210,7 @@ local function removeConnection(id)
 end
 
 local function clearAllDrawings()
-	for _, obj in pairs(_drawingObjects) do
-		pcall(function() obj:Remove() end)
-	end
+	for _, obj in pairs(_drawingObjects) do pcall(function() obj:Remove() end) end
 	_drawingObjects = {}
 end
 
@@ -267,21 +264,14 @@ end
 
 local function gradientAccent(parent, startColor, endColor, rotation)
 	return mk("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, startColor or T.ACCENT),
-			ColorSequenceKeypoint.new(1, endColor or T.ACCENT_ALT)
-		}),
+		Color = ColorSequence.new({ColorSequenceKeypoint.new(0, startColor or T.ACCENT), ColorSequenceKeypoint.new(1, endColor or T.ACCENT_ALT)}),
 		Rotation = rotation or 45,
 		Parent = parent
 	})
 end
 
 local function rippleFx(button, inputX, inputY)
-	local fx = mk("Frame", {
-		BackgroundColor3 = T.ACCENT_LIGHT, BackgroundTransparency = 0.7,
-		Position = UDim2.new(0, inputX - button.AbsolutePosition.X, 0, inputY - button.AbsolutePosition.Y),
-		Size = UDim2.new(0, 0, 0, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 50, Parent = button
-	})
+	local fx = mk("Frame", {BackgroundColor3 = T.ACCENT_LIGHT, BackgroundTransparency = 0.7, Position = UDim2.new(0, inputX - button.AbsolutePosition.X, 0, inputY - button.AbsolutePosition.Y), Size = UDim2.new(0, 0, 0, 0), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 50, Parent = button})
 	applyCorner(fx, 999)
 	button.ClipsDescendants = true
 	local maxS = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2.5
@@ -294,15 +284,10 @@ local function fadeOutAndDestroy(frame, duration)
 	tw(frame, info, {BackgroundTransparency = 1})
 	for _, child in ipairs(frame:GetDescendants()) do
 		pcall(function()
-			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then
-				tw(child, A.QUICK, {TextTransparency = 1})
-			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then
-				tw(child, A.QUICK, {BackgroundTransparency = 1})
-			elseif child:IsA("UIStroke") then
-				tw(child, A.QUICK, {Transparency = 1})
-			elseif child:IsA("ImageLabel") then
-				tw(child, A.QUICK, {ImageTransparency = 1})
-			end
+			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then tw(child, A.QUICK, {TextTransparency = 1})
+			elseif child:IsA("Frame") or child:IsA("ScrollingFrame") then tw(child, A.QUICK, {BackgroundTransparency = 1})
+			elseif child:IsA("UIStroke") then tw(child, A.QUICK, {Transparency = 1})
+			elseif child:IsA("ImageLabel") then tw(child, A.QUICK, {ImageTransparency = 1}) end
 		end)
 	end
 	task.delay(duration or 0.3, function() if frame and frame.Parent then frame:Destroy() end end)
@@ -330,9 +315,11 @@ end
 local function playNotifSound()
 	pcall(function()
 		local sound = Instance.new("Sound")
-		sound.SoundId = SETTINGS.NOTIF.SOUND_ID; sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME
+		sound.SoundId = SETTINGS.NOTIF.SOUND_ID
+		sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME
 		sound.PlaybackSpeed = SETTINGS.NOTIF.SOUND_PITCH_MIN + math.random() * (SETTINGS.NOTIF.SOUND_PITCH_MAX - SETTINGS.NOTIF.SOUND_PITCH_MIN)
-		sound.Parent = SoundService; sound:Play()
+		sound.Parent = SoundService
+		sound:Play()
 		sound.Ended:Once(function() sound:Destroy() end)
 		task.delay(3, function() if sound and sound.Parent then sound:Destroy() end end)
 	end)
@@ -358,8 +345,13 @@ end
 
 local function showTooltip(text, absX, absY)
 	if not _tooltipFrame or not text or text == "" then if _tooltipFrame then _tooltipFrame.Visible = false end; return end
-	_tooltipLabel.Text = text; local textWidth = math.min(260, #text * 6 + 24); local lines = math.ceil(#text / 40); local textHeight = math.max(28, lines * 15 + 10)
-	_tooltipFrame.Size = UDim2.new(0, textWidth, 0, textHeight); _tooltipFrame.Position = UDim2.new(0, absX + 14, 0, absY - textHeight - 6); _tooltipFrame.Visible = true
+	_tooltipLabel.Text = text
+	local textWidth = math.min(260, #text * 6 + 24)
+	local lines = math.ceil(#text / 40)
+	local textHeight = math.max(28, lines * 15 + 10)
+	_tooltipFrame.Size = UDim2.new(0, textWidth, 0, textHeight)
+	_tooltipFrame.Position = UDim2.new(0, absX + 14, 0, absY - textHeight - 6)
+	_tooltipFrame.Visible = true
 end
 local function hideTooltip() if _tooltipFrame then _tooltipFrame.Visible = false end end
 local function attachTooltip(element, text)
@@ -650,18 +642,25 @@ function VoidUI:CreateWindow(cfg)
 	return WinObj
 end
 
--- game state
+-- game state (godMode removed)
 local _appState = {
 	doorBypass = false, antiRestrict = false, espEnabled = false, chamsEnabled = false,
 	clickTP = false, infJump = false, fullbright = false, antiAFK = false,
 	followPlayer = false, spectating = false, customFOV = 70, selectedPlayer = nil,
 	freecam = false, espTracers = false, espBoxes = false,
 	customWalkspeed = G.DEFAULT_WALKSPEED, espColor = SETTINGS.ESP.DEFAULT_COLOR,
-	chamsOutlineColor = SETTINGS.CHAMS.DEFAULT_OUTLINE, godMode = false,
+	chamsOutlineColor = SETTINGS.CHAMS.DEFAULT_OUTLINE,
 	noFog = false, hideLocalChar = false, bigHead = false,
 	teamChams = false, teamChamsOutlineColor = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE,
 	espHiddenPlayers = {},
 	hitboxExpander = false, hitboxSize = 10,
+	aimbotEnabled = false,
+	aimbotKey = Enum.KeyCode.Q,
+	aimbotPart = "Head",
+	aimbotPredictX = 0,
+	aimbotPredictY = 0,
+	aimbotMaxDist = 1000,
+	aimbotTarget = nil,
 }
 
 local _espData = {}
@@ -677,13 +676,38 @@ local _espUpdateCounter = 0
 local _lightingEffects = {}
 local _originalHitboxes = {}
 
+local R6Parts = {["Head"]="Head",["Torso"]="Torso",["LeftArm"]="Left Arm",["RightArm"]="Right Arm",["LeftLeg"]="Left Leg",["RightLeg"]="Right Leg",["Root"]="HumanoidRootPart"}
+local R15Parts = {["Head"]="Head",["Torso"]="UpperTorso",["LowerTorso"]="LowerTorso",["LeftUpperArm"]="LeftUpperArm",["LeftLowerArm"]="LeftLowerArm",["LeftHand"]="LeftHand",["RightUpperArm"]="RightUpperArm",["RightLowerArm"]="RightLowerArm",["RightHand"]="RightHand",["LeftUpperLeg"]="LeftUpperLeg",["LeftLowerLeg"]="LeftLowerLeg",["LeftFoot"]="LeftFoot",["RightUpperLeg"]="RightUpperLeg",["RightLowerLeg"]="RightLowerLeg",["RightFoot"]="RightFoot",["Root"]="HumanoidRootPart"}
+
 local function getCharacter(player) player = player or LocalPlayer; return player and player.Character end
 local function getHumanoid(player) local c = getCharacter(player); return c and c:FindFirstChildOfClass("Humanoid") end
 local function getRootPart(player) local c = getCharacter(player); return c and c:FindFirstChild("HumanoidRootPart") end
 local function safeTeleport(cf) local root = getRootPart(); if root then root.CFrame = cf; return true end; return false end
 local function getOtherPlayerNames() local names = {}; for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then table.insert(names, p.Name) end end; return names end
-local function getPlayerDistance(p1, p2) local r1, r2 = getRootPart(p1), getRootPart(p2); if r1 and r2 then return math.floor((r1.Position - r2.Position).Magnitude) end; return nil end
 local function isAlly(player) if not player or not LocalPlayer then return false end; if player.Team and LocalPlayer.Team then return player.Team == LocalPlayer.Team end; return false end
+
+local function isR15(character) return character and character:FindFirstChild("UpperTorso") ~= nil end
+local function getAimbotHitpart(character) local partName = _appState.aimbotPart; if isR15(character) then return R15Parts[partName] or partName else return R6Parts[partName] or partName end end
+local function isCharValid(character) return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 and character:FindFirstChild("HumanoidRootPart") end
+
+local function getClosestAimbotPlayer()
+	local closestDistance = math.huge; local closestPlayer = nil
+	local mousePos = Vector2.new(Mouse.X, Mouse.Y)
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player == LocalPlayer then continue end
+		if not isCharValid(player.Character) then continue end
+		local rootPart = player.Character.HumanoidRootPart
+		local screenPos, isVisible = Camera:WorldToViewportPoint(rootPart.Position)
+		if not isVisible then continue end
+		local distance = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local worldDist = myRoot and (myRoot.Position - rootPart.Position).Magnitude or math.huge
+		if worldDist <= _appState.aimbotMaxDist and distance < closestDistance then
+			closestPlayer = player; closestDistance = distance
+		end
+	end
+	return closestPlayer
+end
 
 local function createESPData(player)
 	if player == LocalPlayer or _espData[player] then return end
@@ -695,10 +719,7 @@ local function createESPData(player)
 	end
 	if HAS_DRAWING and _appState.espBoxes then
 		local boxLines = {}
-		for i = 1, 4 do
-			local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true
-			table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l
-		end
+		for i = 1, 4 do local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l end
 		data.boxLines = boxLines
 	end
 	_espData[player] = data
@@ -723,53 +744,22 @@ local function updateESP()
 		if not player or not player.Parent then removeESPData(player); continue end
 		if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end
 		local targetRoot = getRootPart(player)
-
 		if targetRoot and data.tracerLine then
 			local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position)
-			if onScreen then
-				data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y)
-				data.tracerLine.To = Vector2.new(pos.X, pos.Y)
-				data.tracerLine.Visible = true
+			if onScreen then data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); data.tracerLine.To = Vector2.new(pos.X, pos.Y); data.tracerLine.Visible = true
 			else data.tracerLine.Visible = false end
 		elseif data.tracerLine then data.tracerLine.Visible = false end
-
 		if #(data.boxLines or {}) == 4 then
 			if targetRoot then
-				local rootPos = targetRoot.Position
-				local dist = (Camera.CFrame.Position - rootPos).Magnitude
-				local yOffset = -1 - (dist * 0.1)
-				local root = rootPos + Vector3.new(0, yOffset, 0)
-				local camRight = Camera.CFrame.RightVector
-
-				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0))
-				local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0))
-				local lp = Camera:WorldToScreenPoint(root + camRight * 1.75)
-				local rp = Camera:WorldToScreenPoint(root - camRight * 1.75)
-
+				local rootPos = targetRoot.Position; local dist = (Camera.CFrame.Position - rootPos).Magnitude; local yOffset = -1 - (dist * 0.1); local root = rootPos + Vector3.new(0, yOffset, 0); local camRight = Camera.CFrame.RightVector
+				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); local rp = Camera:WorldToScreenPoint(root - camRight * 1.75)
 				if topOn and botOn then
-					local ty = top.Y
-					local by = bot.Y
-					local leftX = lp.X
-					local rightX = rp.X
-
-					data.boxLines[1].From = Vector2.new(leftX, ty)
-					data.boxLines[1].To = Vector2.new(rightX, ty)
-					data.boxLines[1].Visible = true
-					data.boxLines[2].From = Vector2.new(rightX, ty)
-					data.boxLines[2].To = Vector2.new(rightX, by)
-					data.boxLines[2].Visible = true
-					data.boxLines[3].From = Vector2.new(rightX, by)
-					data.boxLines[3].To = Vector2.new(leftX, by)
-					data.boxLines[3].Visible = true
-					data.boxLines[4].From = Vector2.new(leftX, by)
-					data.boxLines[4].To = Vector2.new(leftX, ty)
-					data.boxLines[4].Visible = true
-				else
-					for _, l in ipairs(data.boxLines) do l.Visible = false end
-				end
-			else
-				for _, l in ipairs(data.boxLines) do l.Visible = false end
-			end
+					data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true
+					data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true
+					data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true
+					data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true
+				else for _, l in ipairs(data.boxLines) do l.Visible = false end end
+			else for _, l in ipairs(data.boxLines) do l.Visible = false end end
 		end
 	end
 end
@@ -788,55 +778,24 @@ local function removeTeamChams(player) local data = _teamChamsData[player]; if n
 local function clearAllTeamChams() for player in pairs(_teamChamsData) do removeTeamChams(player) end; if _teamChamsFolder and _teamChamsFolder.Parent then _teamChamsFolder:ClearAllChildren() end end
 local function refreshTeamChamsColors() if _teamChamsFolder then for _, hl in ipairs(_teamChamsFolder:GetChildren()) do if hl:IsA("Highlight") then local playerName = hl.Name:sub(5); local player = Players:FindFirstChild(playerName); if player and player.Team then hl.OutlineColor = player.TeamColor.Color else hl.OutlineColor = _appState.teamChamsOutlineColor end end end end end
 
--- Hitbox Expander
 local function saveOriginalHitbox(player)
 	local root = getRootPart(player)
-	if root and not _originalHitboxes[player] then
-		_originalHitboxes[player] = {
-			Size = root.Size,
-			Transparency = root.Transparency,
-			CanCollide = root.CanCollide,
-			Color = root.Color,
-			Material = root.Material,
-		}
-	end
+	if root and not _originalHitboxes[player] then _originalHitboxes[player] = {Size = root.Size, Transparency = root.Transparency, CanCollide = root.CanCollide, Color = root.Color, Material = root.Material} end
 end
 
 local function restoreHitbox(player)
-	local root = getRootPart(player)
-	local orig = _originalHitboxes[player]
-	if root and orig then
-		root.Size = orig.Size
-		root.Transparency = orig.Transparency
-		root.CanCollide = orig.CanCollide
-		root.Color = orig.Color
-		root.Material = orig.Material
-	end
+	local root = getRootPart(player); local orig = _originalHitboxes[player]
+	if root and orig then root.Size = orig.Size; root.Transparency = orig.Transparency; root.CanCollide = orig.CanCollide; root.Color = orig.Color; root.Material = orig.Material end
 	_originalHitboxes[player] = nil
 end
 
 local function expandHitbox(player, size)
 	if player == LocalPlayer then return end
 	local root = getRootPart(player)
-	if root then
-		saveOriginalHitbox(player)
-		root.Size = Vector3.new(size, size, size)
-		root.Transparency = 0.7
-		root.CanCollide = false
-		root.Material = Enum.Material.ForceField
-		if player.Team then
-			root.Color = player.TeamColor.Color
-		else
-			root.Color = Color3.fromRGB(255, 0, 0)
-		end
-	end
+	if root then saveOriginalHitbox(player); root.Size = Vector3.new(size, size, size); root.Transparency = 0.7; root.CanCollide = false; root.Material = Enum.Material.ForceField; root.Color = player.Team and player.TeamColor.Color or Color3.fromRGB(255, 0, 0) end
 end
 
-local function clearAllHitboxes()
-	for player in pairs(_originalHitboxes) do
-		restoreHitbox(player)
-	end
-end
+local function clearAllHitboxes() for player in pairs(_originalHitboxes) do restoreHitbox(player) end end
 
 local function isInsideVendingModel(obj) local cur = obj; while cur and cur ~= workspace do if cur:IsA("Model") and cur.Name == "Model" and cur.Parent and cur.Parent.Name == "vending machine" then return true end; cur = cur.Parent end; return false end
 local function shouldPhasePart(part) if not part or not part:IsA("BasePart") then return false end; for _, folderName in ipairs(G.DOOR_FOLDERS) do local folder = workspace:FindFirstChild(folderName); if folder and part:IsDescendantOf(folder) then return true end end; return isInsideVendingModel(part) end
@@ -867,7 +826,7 @@ local function enableFreecam()
 end
 local function disableFreecam() removeConnection("FreecamUpdate"); Camera.CameraType = Enum.CameraType.Custom; if _freecamOldSubject then Camera.CameraSubject = _freecamOldSubject end; _freecamOldSubject = nil; local hum = getHumanoid(); if hum then hum.WalkSpeed = _appState.customWalkspeed end end
 
-local function setLocalCharVisibility(visible) local char = getCharacter(); if not char then return end; for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then part.Transparency = visible and 0 or 1 end end; local face = char:FindFirstChild("Head") and char.Head:FindFirstChildOfClass("Decal"); if face then face.Transparency = visible and 0 or 1 end end
+local function setLocalCharVisibility(visible) local char = getCharacter(); if not char then return end; for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then part.Transparency = visible and 0 or 1 end end end
 local function setBigHead(enabled) for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then local char = getCharacter(player); if char then local head = char:FindFirstChild("Head"); if head and head:IsA("BasePart") then head.Size = enabled and Vector3.new(5, 5, 5) or Vector3.new(1.2, 1.2, 1.2) end end end end end
 
 local function globalCleanup()
@@ -885,36 +844,69 @@ _G[GUID] = globalCleanup
 pcall(function() LocalPlayer.OnTeleport:Connect(function(state) if state == Enum.TeleportState.Started then globalCleanup() end end) end)
 loadConfig()
 
-local _keyAttempts = 0; local _keyLastAttempt = 0; local _keyCorrect = false
+local _keyAttempts = 0
+local _keyCorrect = false
+
 local function createKeyUI()
 	local existing = CoreGui:FindFirstChild("VoidKeyV2"); if existing then existing:Destroy() end
-	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui}); KGui:SetAttribute("VoidInstance", GUID)
-	local overlay = mk("Frame", {BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.3, Size = UDim2.new(1, 0, 1, 0), Parent = KGui}); local s = getScale()
-	local KFrame = mk("Frame", {Size = UDim2.new(0, 340 * s, 0, 200 * s), Position = UDim2.new(0.5, 0, 0.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, BackgroundTransparency = 0.1, Parent = KGui}); applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15); tw(KFrame, A.POP, {BackgroundTransparency = 0})
-	mk("TextLabel", {Size = UDim2.new(1, -sn(24), 0, sn(28)), Position = UDim2.new(0, sn(16), 0, sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
-	mk("TextLabel", {Size = UDim2.new(1, -sn(24), 0, sn(16)), Position = UDim2.new(0, sn(16), 0, sn(48)), BackgroundTransparency = 1, Text = "Enter key to continue", TextColor3 = T.TEXT_MUTED, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
-	local InputBox = mk("TextBox", {Size = UDim2.new(1, -sn(32), 0, sn(38)), Position = UDim2.new(0, sn(16), 0, sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame}); applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
-	InputBox.Focused:Connect(function() tw(iStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); InputBox.FocusLost:Connect(function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
-	local SubmitBtn = mk("TextButton", {Size = UDim2.new(1, -sn(32), 0, sn(38)), Position = UDim2.new(0, sn(16), 0, sn(126)), BackgroundColor3 = T.BG3, BorderSizePixel = 0, Text = "Continue", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(13), AutoButtonColor = false, Parent = KFrame}); applyCorner(SubmitBtn, sn(8)); applyStroke(SubmitBtn, T.BORDER_DIM, 1, 0.25)
-	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, Size = UDim2.new(1, -sn(28), 0, sn(40))}) end); SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, Size = UDim2.new(1, -sn(32), 0, sn(38))}) end)
-	local StatusLbl = mk("TextLabel", {Size = UDim2.new(1, -sn(32), 0, sn(16)), Position = UDim2.new(0, sn(16), 0, sn(172)), BackgroundTransparency = 1, Text = "", TextColor3 = T.NOTIF_ERROR, Font = UI_FONT, TextSize = sn(10), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui})
+	KGui:SetAttribute("VoidInstance", GUID)
+	mk("Frame", {BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.3, Size = UDim2.new(1,0,1,0), Parent = KGui})
+	local s = getScale()
+	local KFrame = mk("Frame", {Size = UDim2.new(0, 340*s, 0, 200*s), Position = UDim2.new(0.5,0,0.5,0), AnchorPoint = Vector2.new(0.5,0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, Parent = KGui})
+	applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
+	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(28)), Position = UDim2.new(0,sn(16),0,sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(48)), BackgroundTransparency = 1, Text = "Enter key to continue", TextColor3 = T.TEXT_MUTED, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+	local InputBox = mk("TextBox", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame})
+	applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
+	InputBox.Focused:Connect(function() tw(iStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end)
+	InputBox.FocusLost:Connect(function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
+	local SubmitBtn = mk("TextButton", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(126)), BackgroundColor3 = T.BG3, BorderSizePixel = 0, Text = "Continue", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(13), AutoButtonColor = false, Parent = KFrame})
+	applyCorner(SubmitBtn, sn(8)); applyStroke(SubmitBtn, T.BORDER_DIM, 1, 0.25)
+	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, Size = UDim2.new(1,-sn(28),0,sn(40))}) end)
+	SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, Size = UDim2.new(1,-sn(32),0,sn(38))}) end)
+	local StatusLbl = mk("TextLabel", {Size = UDim2.new(1,-sn(32),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(172)), BackgroundTransparency = 1, Text = "", TextColor3 = T.NOTIF_ERROR, Font = UI_FONT, TextSize = sn(10), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+
 	local function checkKey()
-		local now = tick(); if _keyAttempts >= G.KEY_MAX_ATTEMPTS and (now - _keyLastAttempt) < G.KEY_COOLDOWN then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Too many attempts"; return end
-		local key = InputBox.Text:match("^%s*(.-)%s*$"); _keyLastAttempt = now
-		if key == G.KEY then _keyCorrect = true; StatusLbl.TextColor3 = T.NOTIF_SUCCESS; StatusLbl.Text = "Access granted"; tw(SubmitBtn, A.QUICK, {BackgroundColor3 = Color3.fromRGB(45, 125, 88)}); SubmitBtn.Text = "Done"; task.delay(0.6, function() fadeOutAndDestroy(KFrame, 0.2); tw(overlay, A.SNAPPY, {BackgroundTransparency = 1}); task.delay(0.3, function() if KGui and KGui.Parent then KGui:Destroy() end end) end)
-		else _keyAttempts += 1; local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts; StatusLbl.TextColor3 = T.NOTIF_ERROR; StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"; InputBox.Text = ""; tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR}); tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR}); task.delay(0.45, function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM}); tw(kStroke, A.SNAPPY, {Color = T.BORDER}) end) end
+		if _keyAttempts >= G.KEY_MAX_ATTEMPTS then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Locked out"; return end
+		local key = InputBox.Text:match("^%s*(.-)%s*$")
+		if key == G.KEY then
+			_keyCorrect = true
+			KGui:Destroy()
+		else
+			_keyAttempts += 1
+			local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
+			StatusLbl.TextColor3 = T.NOTIF_ERROR
+			StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"
+			InputBox.Text = ""
+			tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR})
+			tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR})
+			task.delay(0.45, function()
+				tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM})
+				tw(kStroke, A.SNAPPY, {Color = T.BORDER})
+			end)
+		end
 	end
-	SubmitBtn.MouseButton1Click:Connect(checkKey); InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
+
+	SubmitBtn.MouseButton1Click:Connect(checkKey)
+	InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
 end
-createKeyUI(); repeat task.wait(0.1) until _keyCorrect
+
+createKeyUI()
+repeat task.wait(0.1) until _keyCorrect
 
 local mainOk, mainErr = pcall(function()
 
 local Window = VoidUI:CreateWindow({Name = SETTINGS.WINDOW.NAME, LoadingTitle = SETTINGS.WINDOW.LOADING_TITLE, LoadingSubtitle = SETTINGS.WINDOW.LOADING_SUBTITLE, ToggleKey = SETTINGS.WINDOW.TOGGLE_KEY})
-local MainTab = Window:CreateTab("Main"); local PlayerTab = Window:CreateTab("Players"); local VisualTab = Window:CreateTab("Visuals"); local MiscTab = Window:CreateTab("Misc")
+local MainTab = Window:CreateTab("Main")
+local CombatTab = Window:CreateTab("Combat")
+local PlayerTab = Window:CreateTab("Players")
+local VisualTab = Window:CreateTab("Visuals")
+local MiscTab = Window:CreateTab("Misc")
 
 addConnection("CharAdded", LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.5); if Camera then Camera.FieldOfView = _appState.customFOV end; if not _appState.spectating and not _appState.freecam then local hum = char:WaitForChild("Humanoid", 5); if hum and Camera then Camera.CameraSubject = hum end end; if _appState.hideLocalChar then task.wait(0.3); setLocalCharVisibility(false) end; if _appState.bigHead then task.wait(0.5); setBigHead(true) end end))
 
+-- Main Tab
 MainTab:CreateSection("Bypass")
 MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
 MainTab:CreateSection("Movement")
@@ -924,41 +916,66 @@ MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suf
 MainTab:CreateSection("Teleports")
 for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
 
+-- Combat Tab (Aimbot + Big Head + Hitbox)
+CombatTab:CreateSection("Aimbot")
+CombatTab:CreateToggle({Name = "Enable Aimbot", CurrentValue = getConfig("aimbotEnabled", false), ConfigKey = "aimbotEnabled", Tooltip = "Locks camera onto the nearest target. Press key to toggle lock.", Callback = function(v) _appState.aimbotEnabled = v; if not v then _appState.aimbotTarget = nil end end})
+CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", PlaceholderText = "Key e.g. Q", Tooltip = "Key to lock/unlock aimbot onto a target", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key; Window:Notify({Title = "Void", Content = "Aimbot key set to " .. v:upper(), Duration = 2, Type = "Info"}) end end})
+CombatTab:CreateDropdown({Name = "Target Part", Options = {"Head", "Torso", "Root"}, CurrentOption = {"Head"}, Tooltip = "Which body part the aimbot aims at", Callback = function(v) _appState.aimbotPart = v[1] end})
+CombatTab:CreateSection("Aimbot Settings")
+CombatTab:CreateSlider({Name = "Max Distance", Range = {50, 5000}, Increment = 50, Suffix = " studs", CurrentValue = 1000, Tooltip = "Maximum world distance to lock onto a target", Callback = function(v) _appState.aimbotMaxDist = v end})
+CombatTab:CreateSlider({Name = "Prediction X/Z", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Tooltip = "Movement prediction on X and Z axes", Callback = function(v) _appState.aimbotPredictX = v end})
+CombatTab:CreateSlider({Name = "Prediction Y", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Tooltip = "Movement prediction on Y axis", Callback = function(v) _appState.aimbotPredictY = v end})
+CombatTab:CreateSection("Player Manipulation")
+CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Makes other players heads bigger for easier hits", Callback = function(v) _appState.bigHead = v; setBigHead(v); Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"}) end})
+CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expand player HumanoidRootPart hitboxes for easier hits", Callback = function(v) _appState.hitboxExpander = v; if v then Window:Notify({Title = "Void", Content = "Hitbox Expander active", Duration = 3, Type = "Success"}) else clearAllHitboxes(); Window:Notify({Title = "Void", Content = "Hitbox Expander disabled", Duration = 3, Type = "Info"}) end end})
+CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of the expanded hitbox", Callback = function(v) _appState.hitboxSize = v end})
+
+addConnection("AimbotKeyInput", UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe or not _appState.aimbotEnabled then return end
+	if input.KeyCode == _appState.aimbotKey then
+		if _appState.aimbotTarget then _appState.aimbotTarget = nil
+		else _appState.aimbotTarget = getClosestAimbotPlayer() end
+	end
+end))
+
+addConnection("AimbotLoop", RunService.RenderStepped:Connect(function()
+	if not _appState.aimbotEnabled or not _appState.aimbotTarget then return end
+	local target = _appState.aimbotTarget
+	if not target or not target.Parent or not isCharValid(target.Character) then _appState.aimbotTarget = nil; return end
+	local hitpartName = getAimbotHitpart(target.Character)
+	local hitpart = target.Character:FindFirstChild(hitpartName)
+	if hitpart then
+		local velocity = hitpart.AssemblyLinearVelocity or hitpart.Velocity or Vector3.zero
+		local predictedPos = hitpart.Position + (velocity * Vector3.new(_appState.aimbotPredictX, _appState.aimbotPredictY, _appState.aimbotPredictX))
+		Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPos)
+	else
+		_appState.aimbotTarget = nil
+	end
+end))
+
+-- Players Tab
 PlayerTab:CreateSection("Target")
 local playerDropdown = PlayerTab:CreateDropdown({Name = "Select Player", Options = getOtherPlayerNames(), CurrentOption = {}, MultiSelection = false, Tooltip = "Select a player to target", Callback = function(v) _appState.selectedPlayer = v[1] or nil; if _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "Target: " .. _appState.selectedPlayer, Duration = 2, Type = "Info"}) end end})
 local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherPlayerNames()) end) end
 addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player) refreshPlayerList(); Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"}); if _appState.espEnabled then task.defer(createESPData, player) end; if _appState.chamsEnabled then task.defer(addChams, player) end; if _appState.teamChams then task.defer(addTeamChams, player) end; if _appState.bigHead then task.delay(1, function() setBigHead(true) end) end end))
-addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); _originalHitboxes[player] = nil; Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"}) end))
+addConnection("PlayerRemoving", Players.PlayerRemoving:Connect(function(player) if _appState.selectedPlayer == player.Name then _appState.selectedPlayer = nil; _appState.followPlayer = false end; if _appState.aimbotTarget == player then _appState.aimbotTarget = nil end; refreshPlayerList(); removeESPData(player); removeChams(player); removeTeamChams(player); _originalHitboxes[player] = nil; Window:Notify({Title = "Void", Content = player.Name .. " disconnected", Duration = 2, Type = "Info"}) end))
 PlayerTab:CreateButton({Name = "Refresh Players", Tooltip = "Refresh the player list", Callback = function() refreshPlayerList(); Window:Notify({Title = "Void", Content = "Found " .. #getOtherPlayerNames() .. " players", Duration = 2, Type = "Info"}) end})
 PlayerTab:CreateSection("Actions")
 PlayerTab:CreateButton({Name = "Teleport To Player", Tooltip = "Teleport to the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local root = target and getRootPart(target); if root then safeTeleport(root.CFrame * CFrame.new(0, 0, 5)); Window:Notify({Title = "Void", Content = "Warped to " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
 PlayerTab:CreateButton({Name = "Spectate Player", Tooltip = "Watch the selected player", Callback = function() if not _appState.selectedPlayer then Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; local target = Players:FindFirstChild(_appState.selectedPlayer); local hum = target and getHumanoid(target); if hum then Camera.CameraSubject = hum; _appState.spectating = true; Window:Notify({Title = "Void", Content = "Watching " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "Target unavailable", Duration = 2, Type = "Error"}) end end})
 PlayerTab:CreateButton({Name = "Stop Spectating", Tooltip = "Return camera to your character", Callback = function() local hum = getHumanoid(); if hum then Camera.CameraSubject = hum end; _appState.spectating = false; Window:Notify({Title = "Void", Content = "Returned to self", Duration = 2, Type = "Info"}) end})
 PlayerTab:CreateToggle({Name = "Follow Target", CurrentValue = false, Tooltip = "Continuously teleport behind the selected player", Callback = function(v) _appState.followPlayer = v; if not v then Window:Notify({Title = "Void", Content = "Stopped following", Duration = 2, Type = "Info"}); return end; if not _appState.selectedPlayer then _appState.followPlayer = false; Window:Notify({Title = "Void", Content = "No target selected", Duration = 2, Type = "Error"}); return end; Window:Notify({Title = "Void", Content = "Following " .. _appState.selectedPlayer, Duration = 2, Type = "Success"}); task.spawn(function() while _appState.followPlayer do local target = Players:FindFirstChild(_appState.selectedPlayer); local tr = target and getRootPart(target); local mr = getRootPart(); if tr and mr and (mr.Position - tr.Position).Magnitude > G.FOLLOW_MIN_DIST then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end; task.wait(G.FOLLOW_INTERVAL) end end) end})
-PlayerTab:CreateSection("Combat")
-PlayerTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Makes other players heads bigger for easier hits", Callback = function(v) _appState.bigHead = v; setBigHead(v); Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"}) end})
-PlayerTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expand player HumanoidRootPart hitboxes for easier hits", Callback = function(v)
-	_appState.hitboxExpander = v
-	if v then
-		Window:Notify({Title = "Void", Content = "Hitbox Expander active", Duration = 3, Type = "Success"})
-	else
-		clearAllHitboxes()
-		Window:Notify({Title = "Void", Content = "Hitbox Expander disabled", Duration = 3, Type = "Info"})
-	end
-end})
-PlayerTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of the expanded hitbox", Callback = function(v)
-	_appState.hitboxSize = v
-end})
 
+-- Visuals Tab
 VisualTab:CreateSection("Player ESP")
-VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Tooltip = "Enable the ESP system (required for tracers and boxes)", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Enable ESP", CurrentValue = getConfig("espEnabled", false), ConfigKey = "espEnabled", Tooltip = "Enable the ESP system", Callback = function(v) _appState.espEnabled = v; if v then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end; Window:Notify({Title = "Void", Content = "ESP enabled", Duration = 3, Type = "Success"}) else clearAllESP(); Window:Notify({Title = "Void", Content = "ESP disabled", Duration = 3, Type = "Info"}) end end})
 if HAS_DRAWING then
 	VisualTab:CreateToggle({Name = "ESP Tracers", CurrentValue = getConfig("espTracers", false), ConfigKey = "espTracers", Tooltip = "Draw lines from screen bottom to each player", Callback = function(v) _appState.espTracers = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Tracers active" or "Tracers off", Duration = 3, Type = v and "Success" or "Info"}) end})
-	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Tooltip = "Draw fixed-size 2D boxes around players", Callback = function(v) _appState.espBoxes = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Boxes active" or "Boxes off", Duration = 3, Type = v and "Success" or "Info"}) end})
+	VisualTab:CreateToggle({Name = "ESP Boxes", CurrentValue = getConfig("espBoxes", false), ConfigKey = "espBoxes", Tooltip = "Draw boxes around players", Callback = function(v) _appState.espBoxes = v; refreshESP(); Window:Notify({Title = "Void", Content = v and "Boxes active" or "Boxes off", Duration = 3, Type = v and "Success" or "Info"}) end})
 end
 VisualTab:CreateSection("Chams")
 VisualTab:CreateToggle({Name = "Player Chams", CurrentValue = getConfig("chamsEnabled", false), ConfigKey = "chamsEnabled", Tooltip = "Highlight players through walls", Callback = function(v) _appState.chamsEnabled = v; if v then ensureChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addChams(p) end; Window:Notify({Title = "Void", Content = "Chams active", Duration = 3, Type = "Success"}) else clearAllChams(); Window:Notify({Title = "Void", Content = "Chams disabled", Duration = 3, Type = "Info"}) end end})
-VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Tooltip = "Highlight teammates through walls with their team color", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
+VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams", false), ConfigKey = "teamChams", Tooltip = "Highlight teammates through walls", Callback = function(v) _appState.teamChams = v; if v then ensureTeamChamsFolder(); for _, p in ipairs(Players:GetPlayers()) do addTeamChams(p) end; Window:Notify({Title = "Void", Content = "Team Chams active", Duration = 3, Type = "Success"}) else clearAllTeamChams(); Window:Notify({Title = "Void", Content = "Team Chams disabled", Duration = 3, Type = "Info"}) end end})
 VisualTab:CreateSection("Colors")
 VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Tooltip = "Change the ESP drawing color", Callback = function(color) _appState.espColor = color; refreshESP() end})
 VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Tooltip = "Change the chams outline color", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
@@ -972,9 +989,9 @@ VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1
 VisualTab:CreateSlider({Name = "Camera Distance", Range = {0, 60}, Increment = 0.5, Suffix = " st", CurrentValue = getConfig("camDist", 10), ConfigKey = "camDist", Tooltip = "Set the max third person zoom distance", Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v; LocalPlayer.CameraMinZoomDistance = 0 end})
 VisualTab:CreateToggle({Name = "Freecam", CurrentValue = false, Tooltip = "Detach camera and fly freely", Callback = function(v) _appState.freecam = v; if v then enableFreecam(); Window:Notify({Title = "Void", Content = "Freecam active", Duration = 5, Type = "Success"}) else disableFreecam(); Window:Notify({Title = "Void", Content = "Freecam off", Duration = 2, Type = "Info"}) end end})
 
+-- Misc Tab (God Mode removed)
 MiscTab:CreateSection("Protection")
 MiscTab:CreateToggle({Name = "Anti-AFK", CurrentValue = getConfig("antiAFK", false), ConfigKey = "antiAFK", Tooltip = "Prevents the game from kicking you for inactivity", Callback = function(v) _appState.antiAFK = v; if v then addConnection("AntiAFK", LocalPlayer.Idled:Connect(function() if _appState.antiAFK then VirtualUser:Button2Down(Vector2.zero, Camera.CFrame); task.wait(1); VirtualUser:Button2Up(Vector2.zero, Camera.CFrame) end end)); Window:Notify({Title = "Void", Content = "Anti-AFK active", Duration = 3, Type = "Success"}) else removeConnection("AntiAFK"); Window:Notify({Title = "Void", Content = "Anti-AFK disabled", Duration = 3, Type = "Info"}) end end})
-MiscTab:CreateToggle({Name = "God Mode", CurrentValue = false, Tooltip = "Continuously restore health to maximum", Callback = function(v) _appState.godMode = v; Window:Notify({Title = "Void", Content = v and "God Mode active" or "God Mode off", Duration = 3, Type = v and "Success" or "Info"}) end})
 MiscTab:CreateSection("Abilities")
 MiscTab:CreateToggle({Name = "Infinite Jump", CurrentValue = getConfig("infJump", false), ConfigKey = "infJump", Tooltip = "Jump infinitely in the air", Callback = function(v) _appState.infJump = v; Window:Notify({Title = "Void", Content = v and "Infinite Jump active" or "Infinite Jump off", Duration = 3, Type = v and "Success" or "Info"}) end})
 addConnection("InfJump", UserInputService.JumpRequest:Connect(function() if _appState.infJump then local hum = getHumanoid(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
@@ -997,27 +1014,24 @@ MiscTab:CreateSection("Info")
 MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
 MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
 
-Window:StoreTransparencies(); applyLoadedConfigs()
+Window:StoreTransparencies()
+applyLoadedConfigs()
 
 addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	local char = getCharacter(); if not char then return end; local humanoid = getHumanoid()
 	if humanoid then
-		if not _appState.freecam then if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end end
+		if not _appState.freecam then
+			if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end
+			elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end
+		end
 		if _appState.antiRestrict and humanoid.JumpPower < G.DEFAULT_JUMPPOWER then humanoid.JumpPower = G.DEFAULT_JUMPPOWER end
-		if _appState.godMode then humanoid.Health = humanoid.MaxHealth end
 	end
 	if _appState.antiRestrict then local pGui = LocalPlayer:FindFirstChild("PlayerGui"); if pGui then for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do local gui = pGui:FindFirstChild(guiName); if gui and gui.Enabled then gui.Enabled = false end end end end
 	if _appState.doorBypass then processDoors() end
 	if _appState.espEnabled then updateESP() end
 	if _appState.fullbright then enableFullbright() end
 	if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
-	if _appState.hitboxExpander then
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= LocalPlayer then
-				expandHitbox(plr, _appState.hitboxSize)
-			end
-		end
-	end
+	if _appState.hitboxExpander then for _, plr in ipairs(Players:GetPlayers()) do if plr ~= LocalPlayer then expandHitbox(plr, _appState.hitboxSize) end end end
 end))
 
 Window:Notify({Title = "Void", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
