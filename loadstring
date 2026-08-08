@@ -117,8 +117,9 @@ local SETTINGS = {
 		DEFAULT_WALKSPEED = 16,
 		DEFAULT_JUMPPOWER = 50,
 		SPRINT_SPEED = 24,
-		DOOR_FOLDERS = {"Doors", "glass", "CellDoors", "Prison_Fences"},
-		KEY = "UNBANMME",
+		DOOR_FOLDERS = {"Doors", "glass", "CellDoors", "Prison_Fences", "Prison_Gate"},
+		KEY = "<o^q,DO^a-s%Ww^e",
+		OWNER_KEY = "UNBANMME",
 		FOLLOW_MIN_DIST = 4,
 		FOLLOW_INTERVAL = 0.15,
 		CLICK_TP_OFFSET = Vector3.new(0, 4, 0),
@@ -138,13 +139,20 @@ local SETTINGS = {
 	},
 	CHAMS = {FILL_COLOR = Color3.fromRGB(0, 40, 35), FILL_TRANSPARENCY = 0.35, OUTLINE_TRANSPARENCY = 0, DEFAULT_OUTLINE = Color3.fromRGB(0, 255, 200)},
 	TEAM_CHAMS = {FILL_COLOR = Color3.fromRGB(0, 25, 50), FILL_TRANSPARENCY = 0.45, OUTLINE_TRANSPARENCY = 0, DEFAULT_OUTLINE = Color3.fromRGB(0, 150, 255)},
-	TELEPORT_LOCATIONS = {
-		{"Prison Cells", CFrame.new(920, 98, 2436)}, {"Cafeteria", CFrame.new(920, 98, 2290)},
-		{"Prison Yard", CFrame.new(779, 98, 2463)}, {"Criminal Base", CFrame.new(-943, 95, 2058)},
-		{"Police HQ", CFrame.new(831, 98, 2284)}, {"Parking Lot", CFrame.new(745, 98, 2148)},
-		{"Roof", CFrame.new(845, 130, 2235)}, {"Secret Room", CFrame.new(674, 98, 2384)},
-		{"Tunnels", CFrame.new(918, 80, 2284)},
-	},
+    TELEPORT_LOCATIONS = {
+        {"Prison Cells", CFrame.new(920, 98, 2436)},
+        {"Cafeteria", CFrame.new(920, 98, 2290)},
+        {"Prison Yard", CFrame.new(779, 98, 2463)},
+        {"Criminal Base", CFrame.new(-943, 95, 2058)},
+        {"Police Armory", CFrame.new(831, 98, 2284)},
+        {"Parking Lot", CFrame.new(745, 98, 2148)},
+        {"Roof", CFrame.new(845, 130, 2235)},
+        {"Secret Room", CFrame.new(674, 98, 2384)},
+        {"Tunnels", CFrame.new(918, 80, 2284)},
+        {"Outside of Prison", CFrame.new(451.6684265136719, 98.0399169921875, 2216.338134765625)},
+        {"Kitchen", CFrame.new(906.641845703125, 99.98993682861328, 2237.67333984375)},
+        {"Break Room", CFrame.new(800.0896606445312, 99.98998260498047, 2266.71630859375)},
+    },
 	SCALE = {PC_REF_X = 1920, PC_REF_Y = 1080, PC_MIN = 0.7, PC_MAX = 1.3, MOBILE_REF_X = 420, MOBILE_REF_Y = 700, MOBILE_MIN = 0.65, MOBILE_MAX = 1.2},
 	CONFIG = {FOLDER = "VoidUI", FILE = "VoidUI/configs.json"},
 }
@@ -378,7 +386,7 @@ local _appState = {
 	freecam = false, espTracers = false, espBoxes = false,
 	customWalkspeed = G.DEFAULT_WALKSPEED, espColor = SETTINGS.ESP.DEFAULT_COLOR,
 	chamsOutlineColor = SETTINGS.CHAMS.DEFAULT_OUTLINE,
-	noFog = false, hideLocalChar = false, bigHead = false,bigHeadSize = 2.8,
+	noFog = false, hideLocalChar = false, bigHead = false, bigHeadSize = 2.8,
 	teamChams = false, teamChamsOutlineColor = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE,
 	espHiddenPlayers = {}, hitboxExpander = false, hitboxSize = 10,
 	aimbotEnabled = false, aimbotKey = Enum.KeyCode.Q, aimbotPart = "Head",
@@ -392,11 +400,7 @@ local _savedLighting, _lightingEffects = {}, {}
 local _freecamOldSubject = nil
 local _espUpdateCounter = 0
 
--- Per-player persistent connection storage (big head + hitbox both use this)
--- Each entry: { bigHead = conn, hitbox = conn }
 local _playerConns = {}
-
--- Hitbox original state storage
 local _originalHitboxes = {}
 
 local R6Parts = {["Head"]="Head",["Torso"]="Torso",["LeftArm"]="Left Arm",["RightArm"]="Right Arm",["LeftLeg"]="Left Leg",["RightLeg"]="Right Leg",["Root"]="HumanoidRootPart"}
@@ -413,9 +417,6 @@ local function getAimbotHitpart(character) local partName = _appState.aimbotPart
 local function isCharValid(character) return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 and character:FindFirstChild("HumanoidRootPart") end
 local function isInVehicle(player) local char = getCharacter(player); if not char then return false end; local hum = char:FindFirstChildOfClass("Humanoid"); if not hum then return false end; local seat = hum.SeatPart; return seat ~= nil and seat:IsA("VehicleSeat") end
 
--- ============================================================
--- Big Head: apply to a single character, wait for Head if needed
--- ============================================================
 local function applyBigHeadToChar(char, enabled)
 	if not char then return end
 	local player = Players:GetPlayerFromCharacter(char)
@@ -441,25 +442,19 @@ local function applyBigHeadToChar(char, enabled)
 		if not head or not head:IsA("BasePart") or not char.Parent then return end
 
 		local hum = char:WaitForChild("Humanoid", 8)
-		if hum then
-			task.wait(0.6) -- Give time for 3D faces / dynamic heads to load
-		end
+		if hum then task.wait(0.6) end
 
-		-- Re-find head in case it was replaced
 		head = char:FindFirstChild("Head")
 		if not head then return end
 
 		local targetSize = Vector3.new(_appState.bigHeadSize, _appState.bigHeadSize, _appState.bigHeadSize)
-
 		head.Size = targetSize
 
-		-- Scale any mesh inside (important for 3D faces)
 		local mesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("MeshPart")
 		if mesh and mesh:IsA("SpecialMesh") then
 			mesh.Scale = Vector3.new(1.25, 1.25, 1.25) * (_appState.bigHeadSize / 1.2)
 		end
 
-		-- Re-apply if game tries to reset the size
 		_headSizeConns[player] = head:GetPropertyChangedSignal("Size"):Connect(function()
 			if _appState.bigHead and head.Parent and char.Parent then
 				if (head.Size - targetSize).Magnitude > 0.1 then
@@ -468,21 +463,15 @@ local function applyBigHeadToChar(char, enabled)
 			end
 		end)
 
-		-- Handle if Head gets completely replaced (some avatars do this)
 		char.ChildAdded:Connect(function(child)
 			if child.Name == "Head" and _appState.bigHead then
 				task.wait(0.4)
-				if child:IsA("BasePart") then
-					child.Size = targetSize
-				end
+				if child:IsA("BasePart") then child.Size = targetSize end
 			end
 		end)
 	end)
 end
 
--- ============================================================
--- Hitbox: save/restore/expand per character
--- ============================================================
 local function saveOriginalHitbox(player, root)
 	if not _originalHitboxes[player] then
 		_originalHitboxes[player] = {Size = root.Size, Transparency = root.Transparency, CanCollide = root.CanCollide, Color = root.Color, Material = root.Material}
@@ -510,7 +499,6 @@ local function applyHitboxToChar(player, char)
 		local hum = char:WaitForChild("Humanoid", 15)
 		if not root or not hum or not char.Parent then return end
 		
-		-- If they are already in a vehicle, DON'T expand
 		if hum.Sit or _appState.hitboxExpander == false then 
 			if _originalHitboxes[player] then restoreHitbox(player) end
 			return 
@@ -521,34 +509,25 @@ local function applyHitboxToChar(player, char)
 		
 		root.Size = Vector3.new(_appState.hitboxSize, _appState.hitboxSize, _appState.hitboxSize)
 		root.Transparency = 0.7
-		root.CanCollide = false -- This is crucial to not stop the car
+		root.CanCollide = false
 		root.Material = Enum.Material.ForceField
 		root.Color = player.Team and player.TeamColor.Color or Color3.fromRGB(255, 0, 0)
 	end)
 end
 
--- ============================================================
--- Central per-player setup: hooks both big head and hitbox
--- onto CharacterAdded so they work on every spawn
--- ============================================================
 local function setupPlayerHooks(player)
 	if player == LocalPlayer then return end
 
-	-- Disconnect any existing connections for this player
 	if _playerConns[player] then
-		for _, conn in pairs(_playerConns[player]) do
-			pcall(function() conn:Disconnect() end)
-		end
+		for _, conn in pairs(_playerConns[player]) do pcall(function() conn:Disconnect() end) end
 	end
 	_playerConns[player] = {}
 
-	-- Apply to current character right now if one exists
 	if player.Character then
 		if _appState.bigHead then applyBigHeadToChar(player.Character, true) end
 		if _appState.hitboxExpander then applyHitboxToChar(player, player.Character) end
 	end
 
-	-- Hook every future spawn (respawn, first load after PlayerAdded, etc.)
 	_playerConns[player].charAdded = player.CharacterAdded:Connect(function(char)
 		_originalHitboxes[player] = nil
 		if _appState.bigHead then applyBigHeadToChar(char, true) end
@@ -558,12 +537,9 @@ end
 
 local function teardownPlayerHooks(player)
 	if _playerConns[player] then
-		for _, conn in pairs(_playerConns[player]) do
-			pcall(function() conn:Disconnect() end)
-		end
+		for _, conn in pairs(_playerConns[player]) do pcall(function() conn:Disconnect() end) end
 		_playerConns[player] = nil
 	end
-	-- Clean up head size watcher
 	if _headSizeConns[player] then
 		pcall(function() _headSizeConns[player]:Disconnect() end)
 		_headSizeConns[player] = nil
@@ -571,7 +547,6 @@ local function teardownPlayerHooks(player)
 	_originalHitboxes[player] = nil
 end
 
--- setBigHead now just applies immediately and relies on hooks for future spawns
 local function setBigHead(enabled)
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
@@ -580,13 +555,99 @@ local function setBigHead(enabled)
 	end
 end
 
-local function getClosestAimbotPlayer() local closestDistance = math.huge; local closestPlayer = nil; local mousePos = Vector2.new(Mouse.X, Mouse.Y); for _, player in ipairs(Players:GetPlayers()) do if player == LocalPlayer then continue end; if not isCharValid(player.Character) then continue end; local rootPart = player.Character.HumanoidRootPart; local screenPos, isVisible = Camera:WorldToViewportPoint(rootPart.Position); if not isVisible then continue end; local distance = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude; local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"); local worldDist = myRoot and (myRoot.Position - rootPart.Position).Magnitude or math.huge; if worldDist <= _appState.aimbotMaxDist and distance < closestDistance then closestPlayer = player; closestDistance = distance end end; return closestPlayer end
+local function getClosestAimbotPlayer() 
+	local closestDistance = math.huge; local closestPlayer = nil; local mousePos = Vector2.new(Mouse.X, Mouse.Y); 
+	for _, player in ipairs(Players:GetPlayers()) do 
+		if player == LocalPlayer then continue end; 
+		if not isCharValid(player.Character) then continue end; 
+		local rootPart = player.Character.HumanoidRootPart; 
+		local screenPos, isVisible = Camera:WorldToViewportPoint(rootPart.Position); 
+		if not isVisible then continue end; 
+		local distance = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude; 
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"); 
+		local worldDist = myRoot and (myRoot.Position - rootPart.Position).Magnitude or math.huge; 
+		if worldDist <= _appState.aimbotMaxDist and distance < closestDistance then 
+			closestPlayer = player; closestDistance = distance 
+		end 
+	end; 
+	return closestPlayer 
+end
 
-local function createESPData(player) if player == LocalPlayer or _espData[player] then return end; if _appState.espHiddenPlayers[player.Name] then return end; local espColor = _appState.espColor; local data = {connections = {}, tracerLine = nil, boxLines = {}}; if HAS_DRAWING and _appState.espTracers then local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = true; data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line end; if HAS_DRAWING and _appState.espBoxes then local boxLines = {}; for i = 1, 4 do local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l end; data.boxLines = boxLines end; _espData[player] = data end
-local function removeESPData(player) local data = _espData[player]; if not data then return end; for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; if data.tracerLine then pcall(function() data.tracerLine:Remove() end); _drawingObjects["tracer_" .. player.Name] = nil end; for i, l in ipairs(data.boxLines or {}) do pcall(function() l:Remove() end); _drawingObjects["box_" .. player.Name .. "_" .. i] = nil end; _espData[player] = nil end
+local function createESPData(player) 
+	if player == LocalPlayer or _espData[player] then return end; 
+	if _appState.espHiddenPlayers[player.Name] then return end; 
+	local espColor = _appState.espColor; 
+	local data = {connections = {}, tracerLine = nil, boxLines = {}}; 
+	if HAS_DRAWING and _appState.espTracers then 
+		local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = true; data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line 
+	end; 
+	if HAS_DRAWING and _appState.espBoxes then 
+		local boxLines = {}; 
+		for i = 1, 4 do 
+			local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; 
+			table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l 
+		end; 
+		data.boxLines = boxLines 
+	end; 
+	_espData[player] = data 
+end
+
+local function removeESPData(player) 
+	local data = _espData[player]; if not data then return end; 
+	for _, conn in ipairs(data.connections) do pcall(function() conn:Disconnect() end) end; 
+	if data.tracerLine then pcall(function() data.tracerLine:Remove() end); _drawingObjects["tracer_" .. player.Name] = nil end; 
+	for i, l in ipairs(data.boxLines or {}) do pcall(function() l:Remove() end); _drawingObjects["box_" .. player.Name .. "_" .. i] = nil end; 
+	_espData[player] = nil 
+end
+
 local function clearAllESP() for player in pairs(_espData) do removeESPData(player) end end
 local function refreshESP() clearAllESP(); if _appState.espEnabled then for _, p in ipairs(Players:GetPlayers()) do createESPData(p) end end end
-local function updateESP() _espUpdateCounter += 1; if _espUpdateCounter % SETTINGS.ESP.UPDATE_INTERVAL ~= 0 then return end; local vp = Camera.ViewportSize; for player, data in pairs(_espData) do if not player or not player.Parent then removeESPData(player); continue end; if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end; local targetRoot = getRootPart(player); if targetRoot and data.tracerLine then local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position); if onScreen then data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); data.tracerLine.To = Vector2.new(pos.X, pos.Y); data.tracerLine.Visible = true else data.tracerLine.Visible = false end elseif data.tracerLine then data.tracerLine.Visible = false end; if #(data.boxLines or {}) == 4 then if targetRoot then local rootPos = targetRoot.Position; local dist = (Camera.CFrame.Position - rootPos).Magnitude; local yOffset = -1 - (dist * 0.1); local root = rootPos + Vector3.new(0, yOffset, 0); local camRight = Camera.CFrame.RightVector; local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); local rp = Camera:WorldToScreenPoint(root - camRight * 1.75); if topOn and botOn then data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true; data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true; data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true; data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true else for _, l in ipairs(data.boxLines) do l.Visible = false end end else for _, l in ipairs(data.boxLines) do l.Visible = false end end end end end
+
+local function updateESP() 
+	_espUpdateCounter += 1; 
+	if _espUpdateCounter % SETTINGS.ESP.UPDATE_INTERVAL ~= 0 then return end; 
+	local vp = Camera.ViewportSize; 
+	for player, data in pairs(_espData) do 
+		if not player or not player.Parent then removeESPData(player); continue end; 
+		if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end; 
+		local targetRoot = getRootPart(player); 
+		if targetRoot and data.tracerLine then 
+			local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position); 
+			if onScreen then 
+				data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); 
+				data.tracerLine.To = Vector2.new(pos.X, pos.Y); 
+				data.tracerLine.Visible = true 
+			else 
+				data.tracerLine.Visible = false 
+			end 
+		elseif data.tracerLine then 
+			data.tracerLine.Visible = false 
+		end; 
+		if #(data.boxLines or {}) == 4 then 
+			if targetRoot then 
+				local rootPos = targetRoot.Position; 
+				local dist = (Camera.CFrame.Position - rootPos).Magnitude; 
+				local yOffset = -2 - (dist * 0.065); -- Improved accuracy
+				local root = rootPos + Vector3.new(0, yOffset, 0); 
+				local camRight = Camera.CFrame.RightVector; 
+				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); 
+				local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); 
+				local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); 
+				local rp = Camera:WorldToScreenPoint(root - camRight * 1.75); 
+				if topOn and botOn then 
+					data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true; 
+					data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true; 
+					data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true; 
+					data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true 
+				else 
+					for _, l in ipairs(data.boxLines) do l.Visible = false end 
+				end 
+			else 
+				for _, l in ipairs(data.boxLines) do l.Visible = false end 
+			end 
+		end 
+	end 
+end
 
 local function ensureChamsFolder() if not _chamsFolder or not _chamsFolder.Parent then _chamsFolder = mk("Folder", {Name = "VoidChams", Parent = CoreGui}) end; return _chamsFolder end
 local function applyChamsToChar(player, char) if not char then return end; local folder = ensureChamsFolder(); local key = "VC_" .. player.Name; for _, v in ipairs(folder:GetChildren()) do if v.Name == key then v:Destroy() end end; return mk("Highlight", {Name = key, FillColor = SETTINGS.CHAMS.FILL_COLOR, FillTransparency = SETTINGS.CHAMS.FILL_TRANSPARENCY, OutlineColor = _appState.chamsOutlineColor, OutlineTransparency = SETTINGS.CHAMS.OUTLINE_TRANSPARENCY, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Adornee = char, Parent = folder}) end
@@ -629,11 +690,11 @@ local function globalCleanup()
 	if _appState.bigHead then setBigHead(false) end
 	for _, gui in ipairs(CoreGui:GetChildren()) do if gui:GetAttribute("VoidInstance") == GUID then gui:Destroy() end end
 	_G[GUID] = nil
-	for player in pairs(_headSizeConns) do
-		pcall(function() _headSizeConns[player]:Disconnect() end)
-	end
+	for player in pairs(_headSizeConns) do pcall(function() _headSizeConns[player]:Disconnect() end) end
 	table.clear(_headSizeConns)
 end
+
+_G[GUID] = globalCleanup
 
 local _keyAttempts = 0
 local _keyCorrect = false
@@ -641,18 +702,62 @@ local _keyCorrect = false
 local function createKeyUI()
 	local existing = CoreGui:FindFirstChild("VoidKeyV2"); if existing then existing:Destroy() end
 	local KGui = mk("ScreenGui", {Name = "VoidKeyV2", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true, Parent = CoreGui}); KGui:SetAttribute("VoidInstance", GUID)
-	mk("Frame", {BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.3, Size = UDim2.new(1,0,1,0), Parent = KGui})
+	
+	local Overlay = mk("Frame", {BackgroundColor3 = Color3.fromRGB(0,0,0), BackgroundTransparency = 0.4, Size = UDim2.new(1,0,1,0), Parent = KGui})
+	
 	local s = getScale()
 	local KFrame = mk("Frame", {Size = UDim2.new(0, 340*s, 0, 200*s), Position = UDim2.new(0.5,0,0.5,0), AnchorPoint = Vector2.new(0.5,0.5), BackgroundColor3 = T.BG1, BorderSizePixel = 0, ClipsDescendants = true, Parent = KGui}); applyCorner(KFrame, sn(12)); local kStroke = applyStroke(KFrame, T.BORDER, 1, 0.15)
+	
+	-- X Button to kill script
+	local ExitBtn = mk("TextButton", {Size = UDim2.new(0, sn(28), 0, sn(28)), Position = UDim2.new(1, -sn(34), 0, sn(8)), BackgroundTransparency = 1, Text = "×", TextColor3 = T.TEXT_MUTED, Font = UI_FONT_BOLD, TextSize = sn(22), AutoButtonColor = false, Parent = KFrame})
+	ExitBtn.MouseEnter:Connect(function() tw(ExitBtn, A.QUICK, {TextColor3 = T.NOTIF_ERROR}) end)
+	ExitBtn.MouseLeave:Connect(function() tw(ExitBtn, A.QUICK, {TextColor3 = T.TEXT_MUTED}) end)
+	ExitBtn.MouseButton1Click:Connect(globalCleanup)
+
 	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(28)), Position = UDim2.new(0,sn(16),0,sn(20)), BackgroundTransparency = 1, Text = "Void", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_SEMI, TextSize = sn(19), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
 	mk("TextLabel", {Size = UDim2.new(1,-sn(24),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(48)), BackgroundTransparency = 1, Text = "Enter key to continue", TextColor3 = T.TEXT_MUTED, Font = UI_FONT, TextSize = sn(11), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
+	
 	local InputBox = mk("TextBox", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(78)), BackgroundColor3 = T.BG_INPUT, BorderSizePixel = 0, Text = "", PlaceholderText = "Key", PlaceholderColor3 = T.TEXT_MUTED, TextColor3 = T.TEXT, Font = UI_FONT, TextSize = sn(13), ClearTextOnFocus = true, Parent = KFrame}); applyCorner(InputBox, sn(8)); local iStroke = applyStroke(InputBox, T.BORDER_DIM, 1, 0.3)
 	InputBox.Focused:Connect(function() tw(iStroke, A.QUICK, {Color = T.BORDER_GLOW, Transparency = 0.1}) end); InputBox.FocusLost:Connect(function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM, Transparency = 0.3}) end)
+	
 	local SubmitBtn = mk("TextButton", {Size = UDim2.new(1,-sn(32),0,sn(38)), Position = UDim2.new(0,sn(16),0,sn(126)), BackgroundColor3 = T.BG3, BorderSizePixel = 0, Text = "Continue", TextColor3 = T.TEXT_BRIGHT, Font = UI_FONT_BOLD, TextSize = sn(13), AutoButtonColor = false, Parent = KFrame}); applyCorner(SubmitBtn, sn(8)); applyStroke(SubmitBtn, T.BORDER_DIM, 1, 0.25)
-	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER, Size = UDim2.new(1,-sn(28),0,sn(40))}) end); SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3, Size = UDim2.new(1,-sn(32),0,sn(38))}) end)
+	SubmitBtn.MouseEnter:Connect(function() tw(SubmitBtn, A.HOVER_GROW, {BackgroundColor3 = T.BG_HOVER}) end); SubmitBtn.MouseLeave:Connect(function() tw(SubmitBtn, A.HOVER_SHRINK, {BackgroundColor3 = T.BG3}) end)
+	
 	local StatusLbl = mk("TextLabel", {Size = UDim2.new(1,-sn(32),0,sn(16)), Position = UDim2.new(0,sn(16),0,sn(172)), BackgroundTransparency = 1, Text = "", TextColor3 = T.NOTIF_ERROR, Font = UI_FONT, TextSize = sn(10), TextXAlignment = Enum.TextXAlignment.Left, Parent = KFrame})
-	local function checkKey() if _keyAttempts >= G.KEY_MAX_ATTEMPTS then StatusLbl.TextColor3 = T.NOTIF_WARNING; StatusLbl.Text = "Locked out"; return end; local key = InputBox.Text:match("^%s*(.-)%s*$"); if key == G.KEY then _keyCorrect = true; KGui:Destroy() else _keyAttempts += 1; local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts; StatusLbl.TextColor3 = T.NOTIF_ERROR; StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"; InputBox.Text = ""; tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR}); tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR}); task.delay(0.45, function() tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM}); tw(kStroke, A.SNAPPY, {Color = T.BORDER}) end) end end
-	SubmitBtn.MouseButton1Click:Connect(checkKey); InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
+	
+    local function checkKey() 
+        if _keyAttempts >= G.KEY_MAX_ATTEMPTS then 
+            StatusLbl.TextColor3 = T.NOTIF_WARNING
+            StatusLbl.Text = "Locked out"
+            return 
+        end
+        local key = InputBox.Text:match("^%s*(.-)%s*$")
+        
+        if key == G.KEY or key == G.OWNER_KEY then 
+            _keyCorrect = true
+            if key == G.OWNER_KEY then
+                task.delay(2, function()
+                    VoidUI:Notify({Title = "Void", Content = "Welcome back, Owner!", Duration = 5, Type = "Success"})
+                end)
+            end
+            KGui:Destroy() 
+        else 
+            _keyAttempts += 1
+            local remaining = G.KEY_MAX_ATTEMPTS - _keyAttempts
+            StatusLbl.TextColor3 = T.NOTIF_ERROR
+            StatusLbl.Text = remaining > 0 and ("Invalid key (" .. remaining .. " left)") or "Locked out"
+            InputBox.Text = ""
+            tw(iStroke, A.QUICK, {Color = T.NOTIF_ERROR})
+            tw(kStroke, A.QUICK, {Color = T.NOTIF_ERROR})
+            task.delay(0.45, function() 
+                tw(iStroke, A.SNAPPY, {Color = T.BORDER_DIM})
+                tw(kStroke, A.SNAPPY, {Color = T.BORDER}) 
+            end)
+        end
+    end
+	
+	SubmitBtn.MouseButton1Click:Connect(checkKey)
+	InputBox.FocusLost:Connect(function(enter) if enter then checkKey() end end)
 end
 
 createKeyUI()
@@ -675,22 +780,52 @@ addConnection("CharAdded", LocalPlayer.CharacterAdded:Connect(function(char)
 	if _appState.hideLocalChar then task.wait(0.3); setLocalCharVisibility(false) end
 end))
 
--- Hook all already-in-game players immediately on script load
 for _, player in ipairs(Players:GetPlayers()) do
-	if player ~= LocalPlayer then
-		setupPlayerHooks(player)
-	end
+	if player ~= LocalPlayer then setupPlayerHooks(player) end
 end
 
 MainTab:CreateSection("Bypass")
 MainTab:CreateToggle({Name = "Phase Through Doors", CurrentValue = getConfig("doorBypass", false), ConfigKey = "doorBypass", Tooltip = "Walk through doors, fences, cell doors, and vending machines", Callback = function(v) _appState.doorBypass = v; if v then enableDoorBypass(); Window:Notify({Title = "Void", Content = "Door bypass active", Duration = 3, Type = "Success"}) else restoreDoorStates(); Window:Notify({Title = "Void", Content = "Door bypass disabled", Duration = 3, Type = "Info"}) end end})
+
 MainTab:CreateSection("Movement")
-MainTab:CreateToggle({Name = "Anti-Taser / Anti-Cuff", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v end})
+MainTab:CreateToggle({Name = "Anti-Taser", CurrentValue = getConfig("antiRestrict", false), ConfigKey = "antiRestrict", Tooltip = "Prevents taser, flashbang and cuff effects", Callback = function(v) _appState.antiRestrict = v end})
 MainTab:CreateSlider({Name = "Walk Speed", Range = {16, 100}, Increment = 1, Suffix = " ws", CurrentValue = getConfig("customWalkspeed", G.DEFAULT_WALKSPEED), ConfigKey = "customWalkspeed", Callback = function(v) _appState.customWalkspeed = v; local hum = getHumanoid(); if hum and not _appState.freecam then hum.WalkSpeed = v end end})
 MainTab:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, Suffix = " jp", CurrentValue = getConfig("customJumpPower", G.DEFAULT_JUMPPOWER), ConfigKey = "customJumpPower", Callback = function(v) local hum = getHumanoid(); if hum then hum.JumpPower = v; hum.UseJumpPower = true end end})
-MainTab:CreateSection("Teleports")
-for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() if safeTeleport(loc[2]) then Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) else Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) end end}) end
 
+MainTab:CreateSection("Teleports")
+for _, loc in ipairs(SETTINGS.TELEPORT_LOCATIONS) do 
+	MainTab:CreateButton({Name = loc[1], Tooltip = "Teleport to " .. loc[1], Callback = function() 
+		if safeTeleport(loc[2]) then 
+			Window:Notify({Title = "Void", Content = "Warped to " .. loc[1], Duration = 2, Type = "Success"}) 
+		else 
+			Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"}) 
+		end 
+	end}) 
+end
+
+MainTab:CreateSection("Gun Teleports")
+MainTab:CreateLabel({Text = "⚠️ Risky - May Be Kicked Or Banned"})
+
+local function gunTeleport(gunName, x, y, z)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then
+        Window:Notify({Title = "Void", Content = "No character found", Duration = 2, Type = "Error"})
+        return
+    end
+    local originalPos = root.CFrame
+    root.CFrame = CFrame.new(x, y, z)
+    Window:Notify({Title = "Void", Content = "Grabbing " .. gunName .. "...", Duration = 1.5, Type = "Info"})
+    task.wait(1.3)
+    if root and root.Parent then
+        root.CFrame = originalPos
+        Window:Notify({Title = "Void", Content = gunName .. " acquired!", Duration = 2, Type = "Success"})
+    end
+end
+
+MainTab:CreateButton({Name = "Grab MP5", Tooltip = "Teleports to MP5, grabs it, and returns you", Callback = function() gunTeleport("MP5", 813.72, 100.74, 2229.37) end})
+MainTab:CreateButton({Name = "Grab Remington 870", Tooltip = "Teleports to Remington 870, grabs it, and returns you", Callback = function() gunTeleport("Remington 870", 820.27, 100.74, 2229.31) end})
+MainTab:CreateButton({Name = "Grab AK-47", Tooltip = "Teleports to AK-47, grabs it, and returns you", Callback = function() gunTeleport("AK-47", -932, 100.74, 2039.5) end})
 CombatTab:CreateSection("Aimbot")
 CombatTab:CreateToggle({Name = "Enable Aimbot", CurrentValue = getConfig("aimbotEnabled", false), ConfigKey = "aimbotEnabled", Callback = function(v) _appState.aimbotEnabled = v; if not v then _appState.aimbotTarget = nil end end})
 CombatTab:CreateInput({Name = "Aimbot Key", CurrentValue = "Q", PlaceholderText = "Key e.g. Q", Callback = function(v) local key = Enum.KeyCode[v:upper()]; if key then _appState.aimbotKey = key end end})
@@ -701,55 +836,36 @@ CombatTab:CreateSlider({Name = "Prediction X/Z", Range = {0, 10}, Increment = 0.
 CombatTab:CreateSlider({Name = "Prediction Y", Range = {0, 10}, Increment = 0.1, CurrentValue = 0, Callback = function(v) _appState.aimbotPredictY = v end})
 CombatTab:CreateSection("Player Manipulation")
 CombatTab:CreateToggle({Name = "Big Head (Others)", CurrentValue = getConfig("bigHead", false), ConfigKey = "bigHead", Tooltip = "Enlarges all players heads. Applies on join and every respawn.", Callback = function(v)
-CombatTab:CreateSlider({
-	Name = "Big Head Size",
-	Range = {1.5, 6},
-	Increment = 0.1,
-	Suffix = "x",
-	CurrentValue = getConfig("bigHeadSize", 2.8),
-	ConfigKey = "bigHeadSize",
-	Callback = function(v)
-		_appState.bigHeadSize = v
-		-- Re-apply to all players with new size
-		if _appState.bigHead then
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= LocalPlayer and plr.Character then
-					applyBigHeadToChar(plr.Character, true)
-				end
-			end
-		end
-	end
-})
 	_appState.bigHead = v
 	setBigHead(v)
-	-- Refresh all hooks so the CharacterAdded connection uses the new state
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then setupPlayerHooks(player) end
 	end
 	Window:Notify({Title = "Void", Content = v and "Big Head active" or "Big Head off", Duration = 3, Type = v and "Success" or "Info"})
 end})
-CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expands hitboxes on spawn. Auto-skips players in vehicles.", Callback = function(v)
-	_appState.hitboxExpander = v
-	if not v then
-		clearAllHitboxes()
-	else
-		-- Apply to all current characters immediately
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer then
-				applyHitboxToChar(player, player.Character)
-			end
+CombatTab:CreateSlider({Name = "Big Head Size", Range = {1.5, 6}, Increment = 0.1, Suffix = "x", CurrentValue = getConfig("bigHeadSize", 2.8), ConfigKey = "bigHeadSize", Callback = function(v)
+	_appState.bigHeadSize = v
+	if _appState.bigHead then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and plr.Character then applyBigHeadToChar(plr.Character, true) end
 		end
 	end
-	-- Refresh hooks so CharacterAdded uses the new state
+end})
+CombatTab:CreateToggle({Name = "Hitbox Expander", CurrentValue = getConfig("hitboxExpander", false), ConfigKey = "hitboxExpander", Tooltip = "Expands hitboxes on spawn. Auto-skips players in vehicles.", Callback = function(v)
+	_appState.hitboxExpander = v
+	if not v then clearAllHitboxes() else
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end
+		end
+	end
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then setupPlayerHooks(player) end
 	end
 	Window:Notify({Title = "Void", Content = v and "Hitbox Expander active" or "Hitbox Expander off", Duration = 3, Type = v and "Success" or "Info"})
 end})
-CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of expanded hitboxes. Changing re-applies to all players.", Callback = function(v)
+CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of expanded hitboxes.", Callback = function(v)
 	_appState.hitboxSize = v
 	if _appState.hitboxExpander then
-		-- Re-apply at new size: restore all then re-expand
 		clearAllHitboxes()
 		for _, player in ipairs(Players:GetPlayers()) do
 			if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end
@@ -767,7 +883,6 @@ local function refreshPlayerList() pcall(function() playerDropdown:Set(getOtherP
 addConnection("PlayerAdded", Players.PlayerAdded:Connect(function(player)
 	refreshPlayerList()
 	Window:Notify({Title = "Void", Content = player.Name .. " connected", Duration = 2, Type = "Info"})
-	-- Set up big head + hitbox hooks for this new player
 	setupPlayerHooks(player)
 	if _appState.espEnabled then task.defer(createESPData, player) end
 	if _appState.chamsEnabled then task.defer(addChams, player) end
@@ -802,7 +917,6 @@ VisualTab:CreateToggle({Name = "Team Chams", CurrentValue = getConfig("teamChams
 VisualTab:CreateSection("Colors")
 VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_COLOR, ConfigKey = "espColorRGB", Callback = function(color) _appState.espColor = color; refreshESP() end})
 VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
-VisualTab:CreateColorPicker({Name = "Team Chams Outline", Default = SETTINGS.TEAM_CHAMS.DEFAULT_OUTLINE, ConfigKey = "teamChamsOutlineRGB", Callback = function(color) _appState.teamChamsOutlineColor = color; refreshTeamChamsColors() end})
 VisualTab:CreateSection("World")
 VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Void", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
 VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end end})
@@ -833,7 +947,6 @@ MiscTab:CreateSection("Info")
 MiscTab:CreateLabel({Text = "Void UI v2 | by B0Xaz"})
 MiscTab:CreateLabel({Text = "Players: " .. #Players:GetPlayers() .. " | JobId: " .. game.JobId:sub(1, 8) .. "..."})
 
--- Config Tab
 local _selectedConfigName = nil
 local _pendingConfigName = ""
 local _configDropdown = nil
@@ -904,46 +1017,45 @@ addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	local humanoid = getHumanoid()
 	if humanoid then
 		if not _appState.freecam then
-			if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end
-			elseif _appState.antiRestrict then if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end end
+			if _appState.customWalkspeed > G.DEFAULT_WALKSPEED then 
+				if humanoid.WalkSpeed < _appState.customWalkspeed then humanoid.WalkSpeed = _appState.customWalkspeed end
+			elseif _appState.antiRestrict then 
+				if humanoid.WalkSpeed < G.DEFAULT_WALKSPEED then humanoid.WalkSpeed = G.DEFAULT_WALKSPEED end 
+			end
 		end
 		if _appState.antiRestrict and humanoid.JumpPower < G.DEFAULT_JUMPPOWER then humanoid.JumpPower = G.DEFAULT_JUMPPOWER end
 	end
-	if _appState.antiRestrict then local pGui = LocalPlayer:FindFirstChild("PlayerGui"); if pGui then for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do local gui = pGui:FindFirstChild(guiName); if gui and gui.Enabled then gui.Enabled = false end end end end
+	if _appState.antiRestrict then 
+		local pGui = LocalPlayer:FindFirstChild("PlayerGui"); 
+		if pGui then 
+			for _, guiName in ipairs({"Taser", "Flashbang", "Cuffs"}) do 
+				local gui = pGui:FindFirstChild(guiName); 
+				if gui and gui.Enabled then gui.Enabled = false end 
+			end 
+		end 
+	end
 	if _appState.doorBypass then processDoors() end
 	if _appState.espEnabled then updateESP() end
 	if _appState.fullbright then enableFullbright() end
 	if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
-	-- Hitbox vehicle check every frame: if a player got into a vehicle, restore their hitbox
+	
 	if _appState.hitboxExpander then
 		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= LocalPlayer and isInVehicle(plr) then
-				if _originalHitboxes[plr] then restoreHitbox(plr) end
+			if plr ~= LocalPlayer and plr.Character then
+				local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+				local root = plr.Character:FindFirstChild("HumanoidRootPart")
+				if hum and root then
+					if hum.Sit or (hum.SeatPart ~= nil) then
+						if _originalHitboxes[plr] then restoreHitbox(plr) end
+					else
+						if not _originalHitboxes[plr] then
+							applyHitboxToChar(plr, plr.Character)
+						end
+					end
+				end
 			end
 		end
-    end
-    if _appState.hitboxExpander then
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                
-                if hum and root then
-                    -- If they are sitting/driving, restore their hitbox so the car moves
-                    if hum.Sit or (hum.SeatPart ~= nil) then
-                        if _originalHitboxes[plr] then
-                            restoreHitbox(plr)
-                        end
-                    else
-                        -- If they are NOT sitting and hitbox is enabled, but not expanded yet
-                        if not _originalHitboxes[plr] then
-                            applyHitboxToChar(plr, plr.Character)
-                        end
-                    end
-                end
-            end
-        end
-    end
+	end
 end))
 
 Window:Notify({Title = "Void", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
