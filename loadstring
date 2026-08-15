@@ -130,7 +130,7 @@ local SETTINGS = {
 		FREECAM_FAST_MULT = 3,
 	},
 	ESP = {
-		DIST_NEAR = 20, DIST_MID = 50, UPDATE_INTERVAL = 3,
+		DIST_NEAR = 20, DIST_MID = 50, UPDATE_INTERVAL = 2,
 		DEFAULT_COLOR = Color3.fromRGB(0, 255, 200),
 		ENEMY_COLOR = Color3.fromRGB(255, 50, 70),
 		ALLY_COLOR = Color3.fromRGB(0, 200, 255),
@@ -219,9 +219,22 @@ end
 
 local function makeDragHandler(target, handle)
 	local dragging, dragStart, startPos = false, nil, nil
-	handle.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; dragStart = input.Position; startPos = target.Position end end)
-	addConnection("drag_move_" .. target.Name, UserInputService.InputChanged:Connect(function(input) if not dragging or not dragStart or not startPos then return end; if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then local delta = input.Position - dragStart; tw(target, TweenInfo.new(0.08, Enum.EasingStyle.Quint), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}) end end))
-	addConnection("drag_end_" .. target.Name, UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false; dragStart = nil; startPos = nil end end))
+	handle.InputBegan:Connect(function(input) 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            dragging = true; dragStart = input.Position; startPos = target.Position 
+        end 
+    end)
+	addConnection("drag_move_" .. target.Name, UserInputService.InputChanged:Connect(function(input) 
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
+            local delta = input.Position - dragStart
+            target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end 
+    end))
+	addConnection("drag_end_" .. target.Name, UserInputService.InputEnded:Connect(function(input) 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            dragging = false; dragStart = nil; startPos = nil 
+        end 
+    end))
 end
 
 local function playNotifSound() pcall(function() local sound = Instance.new("Sound"); sound.SoundId = SETTINGS.NOTIF.SOUND_ID; sound.Volume = SETTINGS.NOTIF.SOUND_VOLUME; sound.PlaybackSpeed = SETTINGS.NOTIF.SOUND_PITCH_MIN + math.random() * (SETTINGS.NOTIF.SOUND_PITCH_MAX - SETTINGS.NOTIF.SOUND_PITCH_MIN); sound.Parent = SoundService; sound:Play(); sound.Ended:Once(function() sound:Destroy() end); task.delay(3, function() if sound and sound.Parent then sound:Destroy() end end) end) end
@@ -490,7 +503,7 @@ local function clearAllHitboxes()
 end
 
 local function applyHitboxToChar(player, char)
-	if not char or player == LocalPlayer then return end
+	if not char or player == LocalPlayer or not _appState.hitboxExpander then return end
 
 	task.spawn(function()
 		local root = char:FindFirstChild("HumanoidRootPart")
@@ -499,18 +512,11 @@ local function applyHitboxToChar(player, char)
 		if not root then root = char:WaitForChild("HumanoidRootPart", 10) end
 		if not hum then hum = char:WaitForChild("Humanoid", 10) end
 
-		if not root or not hum then return end
-		if not char.Parent then return end
-
-		if hum.Sit then return end
+		if not root or not hum or hum.Sit or hum.SeatPart ~= nil then return end
 
 		saveOriginalHitbox(player, root)
 
-		root.Size = Vector3.new(
-			_appState.hitboxSize,
-			_appState.hitboxSize,
-			_appState.hitboxSize
-		)
+		root.Size = Vector3.new(_appState.hitboxSize, _appState.hitboxSize, _appState.hitboxSize)
 		root.Transparency = _appState.hitboxTransparency
 		root.CanCollide = false
 		root.Color = _appState.hitboxColor
@@ -582,12 +588,12 @@ local function createESPData(player)
 	local espColor = _appState.espColor; 
 	local data = {connections = {}, tracerLine = nil, boxLines = {}}; 
 	if HAS_DRAWING and _appState.espTracers then 
-		local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = true; data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line 
+		local line = Drawing.new("Line"); line.Color = espColor; line.Thickness = SETTINGS.ESP.TRACER_THICKNESS; line.Transparency = 1 - SETTINGS.ESP.TRACER_TRANSPARENCY; line.Visible = false; data.tracerLine = line; _drawingObjects["tracer_" .. player.Name] = line 
 	end; 
 	if HAS_DRAWING and _appState.espBoxes then 
 		local boxLines = {}; 
 		for i = 1, 4 do 
-			local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = true; 
+			local l = Drawing.new("Line"); l.Color = espColor; l.Thickness = SETTINGS.ESP.BOX_THICKNESS; l.Transparency = 1 - SETTINGS.ESP.BOX_TRANSPARENCY; l.Visible = false; 
 			table.insert(boxLines, l); _drawingObjects["box_" .. player.Name .. "_" .. i] = l 
 		end; 
 		data.boxLines = boxLines 
@@ -614,40 +620,38 @@ local function updateESP()
 		if not player or not player.Parent then removeESPData(player); continue end; 
 		if _appState.espHiddenPlayers[player.Name] then removeESPData(player); continue end; 
 		local targetRoot = getRootPart(player); 
-		if targetRoot and data.tracerLine then 
-			local pos, onScreen = Camera:WorldToScreenPoint(targetRoot.Position); 
+		if targetRoot then 
+			local pos, onScreen = Camera:WorldToViewportPoint(targetRoot.Position); 
 			if onScreen then 
-				data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); 
-				data.tracerLine.To = Vector2.new(pos.X, pos.Y); 
-				data.tracerLine.Visible = true 
-			else 
-				data.tracerLine.Visible = false 
-			end 
-		elseif data.tracerLine then 
-			data.tracerLine.Visible = false 
-		end; 
-		if #(data.boxLines or {}) == 4 then 
-			if targetRoot then 
-				local rootPos = targetRoot.Position; 
-				local dist = (Camera.CFrame.Position - rootPos).Magnitude; 
-				local yOffset = -2 - (dist * 0.065); 
-				local root = rootPos + Vector3.new(0, yOffset, 0); 
-				local camRight = Camera.CFrame.RightVector; 
-				local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); 
-				local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); 
-				local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); 
-				local rp = Camera:WorldToScreenPoint(root - camRight * 1.75); 
-				if topOn and botOn then 
+				if data.tracerLine then
+					data.tracerLine.From = Vector2.new(vp.X / 2, vp.Y); 
+					data.tracerLine.To = Vector2.new(pos.X, pos.Y); 
+					data.tracerLine.Visible = true 
+				end
+
+				if #(data.boxLines or {}) == 4 then 
+					local rootPos = targetRoot.Position; 
+					local dist = (Camera.CFrame.Position - rootPos).Magnitude; 
+					local yOffset = -2 - (dist * 0.065); 
+					local root = rootPos + Vector3.new(0, yOffset, 0); 
+					local camRight = Camera.CFrame.RightVector; 
+					local top, topOn = Camera:WorldToScreenPoint(root + Vector3.new(0, 2.75, 0)); 
+					local bot, botOn = Camera:WorldToScreenPoint(root - Vector3.new(0, 2.75, 0)); 
+					local lp = Camera:WorldToScreenPoint(root + camRight * 1.75); 
+					local rp = Camera:WorldToScreenPoint(root - camRight * 1.75); 
+					
 					data.boxLines[1].From = Vector2.new(lp.X, top.Y); data.boxLines[1].To = Vector2.new(rp.X, top.Y); data.boxLines[1].Visible = true; 
 					data.boxLines[2].From = Vector2.new(rp.X, top.Y); data.boxLines[2].To = Vector2.new(rp.X, bot.Y); data.boxLines[2].Visible = true; 
 					data.boxLines[3].From = Vector2.new(rp.X, bot.Y); data.boxLines[3].To = Vector2.new(lp.X, bot.Y); data.boxLines[3].Visible = true; 
 					data.boxLines[4].From = Vector2.new(lp.X, bot.Y); data.boxLines[4].To = Vector2.new(lp.X, top.Y); data.boxLines[4].Visible = true 
-				else 
-					for _, l in ipairs(data.boxLines) do l.Visible = false end 
-				end 
+				end
 			else 
-				for _, l in ipairs(data.boxLines) do l.Visible = false end 
+				if data.tracerLine then data.tracerLine.Visible = false end
+				for _, l in ipairs(data.boxLines or {}) do l.Visible = false end 
 			end 
+		else 
+			if data.tracerLine then data.tracerLine.Visible = false end
+			for _, l in ipairs(data.boxLines or {}) do l.Visible = false end 
 		end 
 	end 
 end
@@ -672,9 +676,25 @@ local function rebuildPhaseTargets() table.clear(_phaseTargets); for _, folderNa
 local function restoreDoorStates() for obj, props in pairs(_savedDoorStates) do if obj and obj.Parent then obj.CanCollide = props.CanCollide; obj.Transparency = props.Transparency end end; _savedDoorStates = {}; table.clear(_phaseTargets); removeConnection("DoorBypassWatcher") end
 local function processDoors() for part in pairs(_phaseTargets) do if part and part.Parent then part.CanCollide = false; part.Transparency = math.max(part.Transparency, 0.7) else _phaseTargets[part] = nil end end end
 local function enableDoorBypass() _savedDoorStates = {}; rebuildPhaseTargets(); processDoors(); removeConnection("DoorBypassWatcher"); addConnection("DoorBypassWatcher", workspace.DescendantAdded:Connect(function(obj) if not _appState.doorBypass then return end; if obj:IsA("BasePart") and shouldPhasePart(obj) then cachePhasePart(obj); obj.CanCollide = false; obj.Transparency = math.max(obj.Transparency, 0.7) end end)) end
-local function saveLighting() _savedLighting = {Brightness = Lighting.Brightness, ClockTime = Lighting.ClockTime, FogEnd = Lighting.FogEnd, FogStart = Lighting.FogStart, GlobalShadows = Lighting.GlobalShadows, Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient}; _lightingEffects = {}; for _, child in ipairs(Lighting:GetChildren()) do if child:IsA("Atmosphere") or child:IsA("ColorCorrectionEffect") or child:IsA("BloomEffect") or child:IsA("SunRaysEffect") or child:IsA("BlurEffect") then _lightingEffects[child] = child.Enabled end end end
-local function enableFullbright() if not next(_savedLighting) then saveLighting() end; Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6; Lighting.GlobalShadows = false; Lighting.Ambient = Color3.fromRGB(180, 180, 180); Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180); for child in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = false end end end
-local function disableFullbright() if next(_savedLighting) then for k, v in pairs(_savedLighting) do pcall(function() Lighting[k] = v end) end end; for child, wasEnabled in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = wasEnabled end end end
+
+local function applyLightingSettings()
+	if _appState.fullbright then
+		Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6; Lighting.GlobalShadows = false; Lighting.Ambient = Color3.fromRGB(180, 180, 180); Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180);
+	    for child in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = false end end
+    end
+    if _appState.noFog then
+        Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6
+    end
+end
+
+local function saveLighting() 
+    _savedLighting = {Brightness = Lighting.Brightness, ClockTime = Lighting.ClockTime, FogEnd = Lighting.FogEnd, FogStart = Lighting.FogStart, GlobalShadows = Lighting.GlobalShadows, Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient}; 
+    _lightingEffects = {}; 
+    for _, child in ipairs(Lighting:GetChildren()) do if child:IsA("Atmosphere") or child:IsA("ColorCorrectionEffect") or child:IsA("BloomEffect") or child:IsA("SunRaysEffect") or child:IsA("BlurEffect") then _lightingEffects[child] = child.Enabled end end 
+end
+local function enableFullbright() if not next(_savedLighting) then saveLighting() end; applyLightingSettings(); addConnection("LightingWatcher", Lighting.Changed:Connect(applyLightingSettings)) end
+local function disableFullbright() if not _appState.noFog then removeConnection("LightingWatcher") end; if next(_savedLighting) then for k, v in pairs(_savedLighting) do pcall(function() Lighting[k] = v end) end end; for child, wasEnabled in pairs(_lightingEffects) do if child and child.Parent then child.Enabled = wasEnabled end end end
+
 local function enableFreecam() _freecamOldSubject = Camera.CameraSubject; Camera.CameraType = Enum.CameraType.Scriptable; local hum = getHumanoid(); if hum then hum.WalkSpeed = 0 end; local cf = Camera.CFrame; local yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z); local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1)); addConnection("FreecamUpdate", RunService.RenderStepped:Connect(function(dt) if not _appState.freecam then return end; local mouseDelta = UserInputService:GetMouseDelta(); if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then yaw = yaw - mouseDelta.X * 0.003; pitch = math.clamp(pitch - mouseDelta.Y * 0.003, -math.pi/2 + 0.1, math.pi/2 - 0.1) end; local lookDir = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0); local speed = G.FREECAM_SPEED * dt; if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * G.FREECAM_FAST_MULT end; local moveDir = Vector3.zero; if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + lookDir.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - lookDir.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - lookDir.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + lookDir.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.yAxis end; if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.yAxis end; local newPos = Camera.CFrame.Position; if moveDir.Magnitude > 0 then newPos = newPos + moveDir.Unit * speed end; Camera.CFrame = CFrame.new(newPos) * lookDir end)) end
 local function disableFreecam() removeConnection("FreecamUpdate"); Camera.CameraType = Enum.CameraType.Custom; if _freecamOldSubject then Camera.CameraSubject = _freecamOldSubject end; _freecamOldSubject = nil; local hum = getHumanoid(); if hum then hum.WalkSpeed = _appState.customWalkspeed end end
 local function setLocalCharVisibility(visible) local char = getCharacter(); if not char then return end; for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then part.Transparency = visible and 0 or 1 end end end
@@ -887,7 +907,6 @@ end})
 CombatTab:CreateSlider({Name = "Hitbox Size", Range = {5, 20}, Increment = 1, Suffix = " studs", CurrentValue = getConfig("hitboxSize", 10), ConfigKey = "hitboxSize", Tooltip = "Size of expanded hitboxes.", Callback = function(v)
 	_appState.hitboxSize = v
 	if _appState.hitboxExpander then
-		clearAllHitboxes()
 		for _, player in ipairs(Players:GetPlayers()) do
 			if player ~= LocalPlayer then applyHitboxToChar(player, player.Character) end
 		end
@@ -896,22 +915,26 @@ end})
 
 CombatTab:CreateColorPicker({Name = "Hitbox Color", Default = Color3.fromRGB(255, 0, 0), ConfigKey = "hitboxColorRGB", Tooltip = "Color of the expanded hitbox", Callback = function(color)
 	_appState.hitboxColor = color
-	for plr in pairs(_originalHitboxes) do
-		if plr and plr.Character then
-			local root = plr.Character:FindFirstChild("HumanoidRootPart")
-			if root then root.Color = color end
-		end
-	end
+    if _appState.hitboxExpander then
+	    for plr in pairs(_originalHitboxes) do
+		    if plr and plr.Character then
+			    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+			    if root then root.Color = color end
+		    end
+	    end
+    end
 end})
 
 CombatTab:CreateSlider({Name = "Hitbox Transparency", Range = {0, 1}, Increment = 0.05, Suffix = "", CurrentValue = getConfig("hitboxTransparency", 0.7), ConfigKey = "hitboxTransparency", Tooltip = "0 = fully visible, 1 = invisible", Callback = function(v)
 	_appState.hitboxTransparency = v
-	for plr in pairs(_originalHitboxes) do
-		if plr and plr.Character then
-			local root = plr.Character:FindFirstChild("HumanoidRootPart")
-			if root then root.Transparency = v end
-		end
-	end
+    if _appState.hitboxExpander then
+	    for plr in pairs(_originalHitboxes) do
+		    if plr and plr.Character then
+			    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+			    if root then root.Transparency = v end
+		    end
+	    end
+    end
 end})
 
 addConnection("AimbotKeyInput", UserInputService.InputBegan:Connect(function(input, gpe) if gpe or not _appState.aimbotEnabled then return end; if input.KeyCode == _appState.aimbotKey then if _appState.aimbotTarget then _appState.aimbotTarget = nil else _appState.aimbotTarget = getClosestAimbotPlayer() end end end))
@@ -960,7 +983,7 @@ VisualTab:CreateColorPicker({Name = "ESP Color", Default = SETTINGS.ESP.DEFAULT_
 VisualTab:CreateColorPicker({Name = "Chams Outline", Default = SETTINGS.CHAMS.DEFAULT_OUTLINE, ConfigKey = "chamsOutlineRGB", Callback = function(color) _appState.chamsOutlineColor = color; refreshChamsColors() end})
 VisualTab:CreateSection("World")
 VisualTab:CreateToggle({Name = "Fullbright", CurrentValue = getConfig("fullbright", false), ConfigKey = "fullbright", Callback = function(v) _appState.fullbright = v; if v then enableFullbright() else disableFullbright() end; Window:Notify({Title = "Shank", Content = v and "Fullbright active" or "Fullbright disabled", Duration = 3, Type = v and "Success" or "Info"}) end})
-VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Callback = function(v) _appState.noFog = v; if v then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 else if _savedLighting.FogEnd then Lighting.FogEnd = _savedLighting.FogEnd; Lighting.FogStart = _savedLighting.FogStart end end end})
+VisualTab:CreateToggle({Name = "No Fog", CurrentValue = getConfig("noFog", false), ConfigKey = "noFog", Callback = function(v) _appState.noFog = v; if v then enableFullbright() else disableFullbright() end end})
 VisualTab:CreateToggle({Name = "Hide Local Character", CurrentValue = false, Callback = function(v) _appState.hideLocalChar = v; setLocalCharVisibility(not v) end})
 VisualTab:CreateSection("Camera")
 VisualTab:CreateSlider({Name = "Field of View", Range = {30, 120}, Increment = 1, Suffix = " deg", CurrentValue = getConfig("customFOV", 70), ConfigKey = "customFOV", Callback = function(v) _appState.customFOV = v; Camera.FieldOfView = v end})
@@ -1085,45 +1108,6 @@ addConnection("MainLoop", RunService.Heartbeat:Connect(function()
 	end
 	if _appState.doorBypass then processDoors() end
 	if _appState.espEnabled then updateESP() end
-	if _appState.fullbright then enableFullbright() end
-	if _appState.noFog then Lighting.FogEnd = 1e6; Lighting.FogStart = 1e6 end
-	
-	if _appState.hitboxExpander then
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr == LocalPlayer then continue end
-			local char = plr.Character
-			if not char then continue end
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			local root = char:FindFirstChild("HumanoidRootPart")
-			if not hum or not root then continue end
-	
-			if hum.Sit or hum.SeatPart ~= nil then
-				if _originalHitboxes[plr] then
-					restoreHitbox(plr)
-				end
-			else
-				if _originalHitboxes[plr] then
-					local needsUpdate = root.Size.X ~= _appState.hitboxSize
-						or root.Transparency ~= _appState.hitboxTransparency
-						or root.Color ~= _appState.hitboxColor
-				
-					if needsUpdate then
-						root.Size = Vector3.new(
-							_appState.hitboxSize,
-							_appState.hitboxSize,
-							_appState.hitboxSize
-						)
-						root.Transparency = _appState.hitboxTransparency
-						root.CanCollide = false
-						root.Color = _appState.hitboxColor
-						root.Material = Enum.Material.ForceField
-					end
-				else
-					applyHitboxToChar(plr, char)
-				end
-			end
-		end
-	end
 end))
 
 Window:Notify({Title = "Shank", Content = "Welcome, " .. (LocalPlayer.DisplayName or LocalPlayer.Name), Duration = 5, Type = "Success"})
